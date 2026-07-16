@@ -1,5 +1,6 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
+import { photoDir } from "@/lib/media-paths";
 
 export type FeedPhoto = {
   id: string;
@@ -9,12 +10,6 @@ export type FeedPhoto = {
 };
 
 const photoExtensions = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
-
-export const photoDir = path.join(
-  /* turbopackIgnore: true */ process.cwd(),
-  "konten",
-  "foto",
-);
 
 export function isPhotoFile(filename: string) {
   return photoExtensions.has(path.extname(filename).toLowerCase());

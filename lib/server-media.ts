@@ -2,8 +2,8 @@ import crypto from "node:crypto";
 import { mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/db";
-import { getPhotoContentType, isPhotoFile, photoDir } from "@/lib/photos";
-import { contentDir } from "@/lib/videos";
+import { contentDir, photoDir } from "@/lib/media-paths";
+import { getPhotoContentType, isPhotoFile } from "@/lib/photos";
 
 export const maxPhotoSize = 10 * 1024 * 1024;
 export const maxVideoSize = 100 * 1024 * 1024;

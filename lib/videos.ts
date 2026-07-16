@@ -1,5 +1,5 @@
 import { readdir } from "node:fs/promises";
-import path from "node:path";
+import { contentDir } from "@/lib/media-paths";
 
 export type FeedVideo = {
   id: string;
@@ -7,11 +7,6 @@ export type FeedVideo = {
   src: string;
   title: string;
 };
-
-export const contentDir = path.join(
-  /* turbopackIgnore: true */ process.cwd(),
-  "konten",
-);
 
 function titleFromFilename(filename: string, index: number) {
   const base = filename.replace(/\.mp4$/i, "");

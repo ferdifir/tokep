@@ -2,7 +2,8 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { getPhotoContentType, isPhotoFile, photoDir } from "@/lib/photos";
+import { photoDir } from "@/lib/media-paths";
+import { getPhotoContentType, isPhotoFile } from "@/lib/photos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ function safePhotoPath(name: string) {
     return null;
   }
 
-  const filePath = path.join(photoDir, baseName);
+  const filePath = path.join(/* turbopackIgnore: true */ photoDir, baseName);
 
   if (!filePath.startsWith(`${photoDir}${path.sep}`)) {
     return null;

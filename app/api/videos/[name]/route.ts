@@ -2,7 +2,7 @@ import { stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { contentDir } from "@/lib/videos";
+import { contentDir } from "@/lib/media-paths";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ function safeVideoPath(name: string) {
     return null;
   }
 
-  const filePath = path.join(contentDir, baseName);
+  const filePath = path.join(/* turbopackIgnore: true */ contentDir, baseName);
 
   if (!filePath.startsWith(`${contentDir}${path.sep}`)) {
     return null;
@@ -80,6 +80,15 @@ function parseRange(range: string | null, size: number) {
   };
 }
 
+function streamVideo(filePath: string, start?: number, end?: number) {
+  return Readable.toWeb(
+    createReadStream(filePath, {
+      ...(typeof start === "number" ? { start } : {}),
+      ...(typeof end === "number" ? { end } : {}),
+    }),
+  ) as ReadableStream;
+}
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ name: string }> },
@@ -93,12 +102,21 @@ export async function GET(
 
   try {
     const fileStat = await stat(filePath);
-    const range = parseRange(request.headers.get("range"), fileStat.size);
+    const requestedRange = request.headers.get("range");
+    const range = parseRange(requestedRange, fileStat.size);
+
+    if (requestedRange && !range) {
+      return new Response("Range not satisfiable", {
+        status: 416,
+        headers: {
+          ...MP4_HEADERS,
+          "Content-Range": `bytes */${fileStat.size}`,
+        },
+      });
+    }
 
     if (!range) {
-      const stream = createReadStream(filePath);
-
-      return new Response(Readable.toWeb(stream) as ReadableStream, {
+      return new Response(streamVideo(filePath), {
         status: 200,
         headers: {
           ...MP4_HEADERS,
@@ -107,13 +125,9 @@ export async function GET(
       });
     }
 
-    const stream = createReadStream(filePath, {
-      start: range.start,
-      end: range.end,
-    });
     const chunkSize = range.end - range.start + 1;
 
-    return new Response(Readable.toWeb(stream) as ReadableStream, {
+    return new Response(streamVideo(filePath, range.start, range.end), {
       status: 206,
       headers: {
         ...MP4_HEADERS,
