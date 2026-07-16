@@ -191,3 +191,19 @@ Environment:
 - `GROQ_MODEL`: opsional, default `openai/gpt-oss-20b`.
 - `SERVICE_REPORT_FLAG_THRESHOLD`: jumlah laporan unik sebelum listing diberi peringatan.
 - `TELEGRAM_BOT_TOKEN` dan `ADMIN_TELEGRAM_ID`: notifikasi admin.
+
+## Personalisasi Konten
+
+Video dan foto memakai tag resmi yang diatur admin dari `/admin`.
+
+Alur:
+
+- Admin menulis tag comma-separated pada kartu media.
+- Save media memberi sinyal kuat ke tag media tersebut.
+- View media memberi sinyal ringan atau sedang ke tag media tersebut.
+- Feed video/foto memprioritaskan konten bertag sesuai affinity user.
+- Konten yang belum pernah dilihat tetap mendapat boost agar feed tidak berulang.
+- Jika user belum punya affinity atau tidak mengirim initData Telegram, feed fallback ke urutan global.
+
+User tidak bisa menambah tag langsung. Ini menjaga kualitas tag tetap konsisten
+karena tag menjadi sinyal utama personalisasi.

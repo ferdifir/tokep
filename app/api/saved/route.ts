@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getLimit, getSavedPage } from "@/lib/media-store";
+import { incrementUserTagAffinity } from "@/lib/media-personalization";
 import {
   getOrCreateRequestUser,
   telegramAuthErrorResponse,
@@ -60,6 +61,11 @@ export async function POST(request: Request) {
           userId: user.id,
         },
       },
+    });
+    await incrementUserTagAffinity({
+      mediaId: body.mediaId,
+      score: 8,
+      userId: user.id,
     });
 
     return Response.json({ saved: true, savedId: saved.id });

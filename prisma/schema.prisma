@@ -56,6 +56,8 @@ model User {
   serviceRecommendations ServiceRecommendation[]
   serviceReports         ServiceReport[]
   submittedServices      ServiceListing[]        @relation("ServiceSubmitter")
+  tagAffinities          UserTagAffinity[]
+  mediaViews             MediaView[]
 
   @@index([username])
 }
@@ -70,8 +72,61 @@ model Media {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @default(now()) @updatedAt
   savedMedia SavedMedia[]
+  tags       MediaTag[]
+  views      MediaView[]
 
   @@index([type, visible, id])
+}
+
+model Tag {
+  id         String            @id @default(cuid())
+  name       String            @unique
+  slug       String            @unique
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  mediaTags  MediaTag[]
+  affinities UserTagAffinity[]
+
+  @@index([name])
+}
+
+model MediaTag {
+  id        String   @id @default(cuid())
+  mediaId   String
+  tagId     String
+  createdAt DateTime @default(now())
+  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([mediaId, tagId])
+  @@index([tagId, mediaId])
+}
+
+model MediaView {
+  id         String   @id @default(cuid())
+  userId     String
+  mediaId    String
+  durationMs Int?
+  completed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  media      Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, mediaId, createdAt])
+  @@index([mediaId, createdAt])
+}
+
+model UserTagAffinity {
+  id        String   @id @default(cuid())
+  userId    String
+  tagId     String
+  score     Float    @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tagId])
+  @@index([userId, score])
 }
 
 model SavedMedia {

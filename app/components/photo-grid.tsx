@@ -1,6 +1,7 @@
 "use client";
 
 import type { FeedPhoto } from "@/lib/photos";
+import { recordMediaViewEvent, telegramHeaders } from "@/lib/client-media-events";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -15,6 +16,34 @@ export function PhotoGrid({
   const [nextCursor, setNextCursor] = useState(initialNextCursor);
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<(HTMLElement | null)[]>([]);
+  const viewedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    async function loadPersonalizedInitial() {
+      const headers = telegramHeaders();
+
+      if (!("x-telegram-init-data" in headers)) {
+        return;
+      }
+
+      const response = await fetch("/api/feed/photos?limit=12", { headers });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const page = (await response.json()) as {
+        items: FeedPhoto[];
+        nextCursor: string | null;
+      };
+
+      setPhotos(page.items);
+      setNextCursor(page.nextCursor);
+    }
+
+    void loadPersonalizedInitial();
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) {
@@ -27,7 +56,9 @@ export function PhotoGrid({
       cursor: nextCursor,
       limit: "12",
     });
-    const response = await fetch(`/api/feed/photos?${params}`);
+    const response = await fetch(`/api/feed/photos?${params}`, {
+      headers: telegramHeaders(),
+    });
 
     if (response.ok) {
       const page = (await response.json()) as {
@@ -69,6 +100,36 @@ export function PhotoGrid({
     return () => observer.disconnect();
   }, [loadMore, nextCursor]);
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
+
+          const id = (entry.target as HTMLElement).dataset.mediaId;
+
+          if (!id || viewedRef.current.has(id)) {
+            return;
+          }
+
+          viewedRef.current.add(id);
+          recordMediaViewEvent({ mediaId: id });
+        });
+      },
+      { rootMargin: "250px", threshold: 0.35 },
+    );
+
+    itemRefs.current.forEach((item) => {
+      if (item) {
+        observer.observe(item);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [photos.length]);
+
   if (photos.length === 0) {
     return (
       <div className="flex h-full items-center justify-center px-6 text-center">
@@ -85,8 +146,15 @@ export function PhotoGrid({
   return (
     <>
       <div className="columns-2 gap-2 [column-fill:_balance]">
-        {photos.map((photo) => (
-          <figure className="mb-2 break-inside-avoid" key={photo.id}>
+        {photos.map((photo, index) => (
+          <figure
+            className="mb-2 break-inside-avoid"
+            data-media-id={photo.id}
+            key={photo.id}
+            ref={(element) => {
+              itemRefs.current[index] = element;
+            }}
+          >
             <Link
               aria-label={`Buka ${photo.title}`}
               href={`/foto/${encodeURIComponent(photo.filename)}`}

@@ -21,6 +21,14 @@ export async function GET(request: Request) {
   const search = url.searchParams.get("search")?.trim();
   const rows = await prisma.media.findMany({
     cursor: cursor ? { id: cursor } : undefined,
+    include: {
+      tags: {
+        include: {
+          tag: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
     orderBy: { createdAt: "desc" },
     skip: cursor ? 1 : 0,
     take: limit + 1,
@@ -40,7 +48,10 @@ export async function GET(request: Request) {
   const items = hasMore ? rows.slice(0, limit) : rows;
 
   return Response.json({
-    items,
+    items: items.map((item) => ({
+      ...item,
+      tags: item.tags.map((mediaTag) => mediaTag.tag),
+    })),
     nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
   });
 }

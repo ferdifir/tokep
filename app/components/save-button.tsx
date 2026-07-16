@@ -1,15 +1,10 @@
 "use client";
 
 import { Bookmark } from "lucide-react";
+import { telegramHeaders } from "@/lib/client-media-events";
 import { MouseEvent, useEffect, useState } from "react";
 
 export const savedMediaChangedEvent = "tokep:saved-media-changed";
-
-function telegramHeaders() {
-  const initData = window.Telegram?.WebApp?.initData ?? "";
-
-  return initData ? { "x-telegram-init-data": initData } : ({} as Record<string, string>);
-}
 
 export function SaveButton({
   className = "",

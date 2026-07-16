@@ -19,6 +19,7 @@ type AdminMedia = {
   filename: string;
   id: string;
   src: string;
+  tags?: Array<{ id: string; name: string; slug: string }>;
   title: string;
   type: "PHOTO" | "VIDEO";
   visible: boolean;
@@ -279,6 +280,19 @@ export function AdminDashboard() {
     }
   }
 
+  async function updateMediaTags(id: string, tags: string[]) {
+    const response = await fetch(`/api/admin/media/${id}/tags`, {
+      body: JSON.stringify({ tags }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      method: "PUT",
+    });
+
+    setMessage(response.ok ? "Tag media diperbarui" : "Gagal update tag");
+    await refreshMedia();
+  }
+
   async function deleteMedia(item: AdminMedia) {
     const confirmed = window.confirm(
       `Hapus ${item.title}? File fisik juga akan dihapus.`,
@@ -421,6 +435,7 @@ export function AdminDashboard() {
             syncMedia={syncMedia}
             type={type}
             updateMedia={updateMedia}
+            updateMediaTags={updateMediaTags}
             uploadMedia={uploadMedia}
             uploading={uploading}
           />
@@ -532,6 +547,7 @@ function ContentAdmin({
   syncMedia,
   type,
   updateMedia,
+  updateMediaTags,
   uploadMedia,
   uploading,
 }: {
@@ -548,6 +564,7 @@ function ContentAdmin({
   syncMedia: () => Promise<void>;
   type: string;
   updateMedia: (id: string, body: Partial<AdminMedia>) => Promise<void>;
+  updateMediaTags: (id: string, tags: string[]) => Promise<void>;
   uploadMedia: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   uploading: boolean;
 }) {
@@ -658,6 +675,22 @@ function ContentAdmin({
               <p className="mt-1 text-xs text-white/45">
                 {item.visible ? "Visible" : "Hidden"}
               </p>
+              <input
+                className="mt-3 h-9 w-full rounded-md border border-white/10 bg-black px-3 text-xs text-white/75"
+                defaultValue={item.tags?.map((tag) => tag.name).join(", ") ?? ""}
+                onBlur={(event) => {
+                  const tags = event.target.value
+                    .split(",")
+                    .map((tag) => tag.trim())
+                    .filter(Boolean);
+                  const previous = item.tags?.map((tag) => tag.name).join(", ") ?? "";
+
+                  if (event.target.value.trim() !== previous) {
+                    void updateMediaTags(item.id, tags);
+                  }
+                }}
+                placeholder="Tag: musik, tutorial, lucu"
+              />
             </div>
             <div className="flex items-center gap-2 md:flex-col">
               <button

@@ -2,6 +2,7 @@
 
 import type { FeedVideo } from "@/lib/videos";
 import { SaveButton } from "@/app/components/save-button";
+import { recordMediaViewEvent, telegramHeaders } from "@/lib/client-media-events";
 import { Play, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -48,6 +49,7 @@ export function VideoFeed({
   const [states, setStates] = useState<Record<string, VideoState>>({});
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const viewedRef = useRef<Set<string>>(new Set());
 
   const updateVideoState = useCallback(
     (id: string, nextState: Partial<VideoState>) => {
@@ -61,6 +63,33 @@ export function VideoFeed({
     },
     [],
   );
+
+  useEffect(() => {
+    async function loadPersonalizedInitial() {
+      const headers = telegramHeaders();
+
+      if (!("x-telegram-init-data" in headers)) {
+        return;
+      }
+
+      const response = await fetch("/api/feed/videos?limit=5", { headers });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const page = (await response.json()) as {
+        items: FeedVideo[];
+        nextCursor: string | null;
+      };
+
+      setVideos(page.items);
+      setNextCursor(page.nextCursor);
+      setActiveIndex(0);
+    }
+
+    void loadPersonalizedInitial();
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -105,6 +134,22 @@ export function VideoFeed({
       video.muted = muted;
 
       if (index === activeIndex) {
+        const item = videos[index];
+
+        if (item && !viewedRef.current.has(item.id)) {
+          viewedRef.current.add(item.id);
+          window.setTimeout(() => {
+            const activeVideo = videoRefs.current[index];
+
+            if (activeVideo && !activeVideo.paused) {
+              recordMediaViewEvent({
+                durationMs: Math.round(activeVideo.currentTime * 1000),
+                mediaId: item.id,
+              });
+            }
+          }, 3000);
+        }
+
         const playPromise = video.play();
 
         if (playPromise) {
@@ -162,7 +207,9 @@ export function VideoFeed({
         cursor,
         limit: "5",
       });
-      const response = await fetch(`/api/feed/videos?${params}`);
+      const response = await fetch(`/api/feed/videos?${params}`, {
+        headers: telegramHeaders(),
+      });
 
       if (response.ok) {
         const page = (await response.json()) as {

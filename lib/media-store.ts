@@ -58,8 +58,94 @@ async function findMediaPage(type: MediaType, limit: number, cursor?: string) {
   };
 }
 
-export async function getVideoPage(limit = defaultLimits.videos, cursor?: string) {
-  const page = await findMediaPage("VIDEO", limit, cursor);
+async function findPersonalizedMediaPage({
+  cursor,
+  limit,
+  type,
+  userId,
+}: {
+  cursor?: string;
+  limit: number;
+  type: MediaType;
+  userId: string;
+}) {
+  const offset = cursor ? Number.parseInt(cursor, 10) : 0;
+  const safeOffset = Number.isFinite(offset) && offset > 0 ? offset : 0;
+  const take = Math.max(limit * 5, 30);
+  const [affinities, rows, viewCounts] = await Promise.all([
+    prisma.userTagAffinity.findMany({
+      orderBy: { score: "desc" },
+      select: { score: true, tagId: true },
+      take: 30,
+      where: { userId },
+    }),
+    prisma.media.findMany({
+      include: {
+        tags: {
+          select: { tagId: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take,
+      where: { type, visible: true },
+    }),
+    prisma.mediaView.groupBy({
+      _count: { id: true },
+      by: ["mediaId"],
+      where: { userId },
+    }),
+  ]);
+  const affinityByTag = new Map(
+    affinities.map((affinity) => [affinity.tagId, affinity.score]),
+  );
+  const viewsByMedia = new Map(
+    viewCounts.map((view) => [view.mediaId, view._count.id]),
+  );
+  const now = Date.now();
+  const scored = rows
+    .map((media) => {
+      const tagScore = media.tags.reduce(
+        (total, tag) => total + (affinityByTag.get(tag.tagId) ?? 0),
+        0,
+      );
+      const views = viewsByMedia.get(media.id) ?? 0;
+      const ageDays = Math.max(
+        0,
+        (now - media.createdAt.getTime()) / (24 * 60 * 60 * 1000),
+      );
+      const freshness = Math.max(0, 5 - ageDays * 0.2);
+      const unseen = views === 0 ? 6 : 0;
+      const repeatPenalty = views * 4;
+
+      return {
+        media,
+        score: tagScore * 2 + freshness + unseen - repeatPenalty,
+      };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+
+      return b.media.createdAt.getTime() - a.media.createdAt.getTime();
+    });
+  const pageItems = scored.slice(safeOffset, safeOffset + limit).map((item) => item.media);
+  const nextOffset = safeOffset + pageItems.length;
+
+  return {
+    items: pageItems,
+    nextCursor: nextOffset < scored.length ? String(nextOffset) : null,
+  };
+}
+
+export async function getVideoPage(
+  limit = defaultLimits.videos,
+  cursor?: string,
+  userId?: string | null,
+) {
+  const page = userId
+    ? await findPersonalizedMediaPage({ cursor, limit, type: "VIDEO", userId })
+    : await findMediaPage("VIDEO", limit, cursor);
 
   return {
     items: page.items.map(mediaToFeedVideo),
@@ -67,8 +153,14 @@ export async function getVideoPage(limit = defaultLimits.videos, cursor?: string
   };
 }
 
-export async function getPhotoPage(limit = defaultLimits.photos, cursor?: string) {
-  const page = await findMediaPage("PHOTO", limit, cursor);
+export async function getPhotoPage(
+  limit = defaultLimits.photos,
+  cursor?: string,
+  userId?: string | null,
+) {
+  const page = userId
+    ? await findPersonalizedMediaPage({ cursor, limit, type: "PHOTO", userId })
+    : await findMediaPage("PHOTO", limit, cursor);
 
   return {
     items: page.items.map(mediaToFeedPhoto),

@@ -1,6 +1,7 @@
 "use client";
 
 import { SaveButton } from "@/app/components/save-button";
+import { recordMediaViewEvent } from "@/lib/client-media-events";
 import { ChevronLeft, Play, Volume2, VolumeX } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -17,6 +18,14 @@ export function MediaPreview({ media }: { media: PreviewMedia }) {
   const [muted, setMuted] = useState(true);
   const [paused, setPaused] = useState(true);
   const [loading, setLoading] = useState(media.type === "VIDEO");
+
+  useEffect(() => {
+    recordMediaViewEvent({
+      completed: media.type === "PHOTO",
+      durationMs: media.type === "PHOTO" ? 1000 : undefined,
+      mediaId: media.id,
+    });
+  }, [media.id, media.type]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -81,6 +90,15 @@ export function MediaPreview({ media }: { media: PreviewMedia }) {
             loop
             muted={muted}
             onCanPlay={() => setLoading(false)}
+            onEnded={() =>
+              recordMediaViewEvent({
+                completed: true,
+                durationMs: Math.round(
+                  (videoRef.current?.duration ?? 0) * 1000,
+                ),
+                mediaId: media.id,
+              })
+            }
             onLoadedMetadata={() => setLoading(false)}
             onPause={() => setPaused(true)}
             onPlay={() => setPaused(false)}
