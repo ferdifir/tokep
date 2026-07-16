@@ -8,80 +8,73 @@ APP_PORT="${APP_PORT:-3002}"
 DOMAIN="${DOMAIN:-mandirijayas.my.id}"
 BASE_DIR="${BASE_DIR:-/var/www/tokep}"
 APP_DIR="$BASE_DIR/current"
+REPO_URL="${REPO_URL:-https://github.com/ferdifir/tokep.git}"
+DEPLOY_REF="${DEPLOY_REF:-origin/main}"
 SSH=(ssh -p "$SSH_PORT" "$HOST")
-RSYNC_RSH="ssh -p $SSH_PORT"
 
-echo "Preparing single-build app directory on $HOST"
+echo "Deploying $DEPLOY_REF from $REPO_URL to $HOST"
+
 "${SSH[@]}" "bash -se" <<REMOTE
 set -euo pipefail
-mkdir -p "$BASE_DIR/shared/konten"
 
-if [ -L "$APP_DIR" ]; then
-  current_target="\$(readlink -f "$APP_DIR")"
-  rm "$APP_DIR"
-  mv "\$current_target" "$APP_DIR"
+APP_NAME="$APP_NAME"
+APP_PORT="$APP_PORT"
+APP_DIR="$APP_DIR"
+BASE_DIR="$BASE_DIR"
+REPO_URL="$REPO_URL"
+DEPLOY_REF="$DEPLOY_REF"
+
+mkdir -p "\$BASE_DIR/shared/konten"
+
+if [ ! -d "\$APP_DIR/.git" ]; then
+  rm -rf "\$APP_DIR"
+  git clone "\$REPO_URL" "\$APP_DIR"
 fi
 
-mkdir -p "$APP_DIR"
-REMOTE
+cd "\$APP_DIR"
+git remote set-url origin "\$REPO_URL"
+git fetch --prune origin
 
-if [ "${SYNC_MEDIA:-0}" = "1" ]; then
-  echo "Syncing shared media from local konten/ because SYNC_MEDIA=1"
-  rsync -az --delete \
-    -e "$RSYNC_RSH" \
-    ./konten/ "$HOST:$BASE_DIR/shared/konten/"
-else
-  echo "Skipping media upload. Server media is managed in $BASE_DIR/shared/konten"
+previous_commit=""
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+  previous_commit="\$(git rev-parse HEAD)"
 fi
 
-echo "Uploading source"
-rsync -az --delete \
-  -e "$RSYNC_RSH" \
-  --exclude ".git" \
-  --exclude ".next" \
-  --exclude "node_modules" \
-  --exclude ".env" \
-  --exclude ".env.local" \
-  --exclude ".env.production" \
-  --exclude "konten" \
-  ./ "$HOST:$APP_DIR/"
+git checkout --force "\$DEPLOY_REF"
+deploy_commit="\$(git rev-parse HEAD)"
 
-echo "Installing, migrating, syncing media, and building"
-"${SSH[@]}" "bash -se" <<REMOTE
-set -euo pipefail
-cd "$APP_DIR"
-test -f "$BASE_DIR/shared/.env.production"
-ln -sfn "$BASE_DIR/shared/.env.production" .env
-ln -sfn "$BASE_DIR/shared/konten" konten
+test -f "\$BASE_DIR/shared/.env.production"
+ln -sfn "\$BASE_DIR/shared/.env.production" .env
+ln -sfn "\$BASE_DIR/shared/konten" konten
+
 npm ci
 npm run db:generate
 npx prisma migrate deploy
 npm run media:sync
 npm run build
-REMOTE
 
-echo "Reloading PM2"
-"${SSH[@]}" "bash -se" <<REMOTE
-set -euo pipefail
-cd "$APP_DIR"
-if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
-  pm2 delete "$APP_NAME"
+if pm2 describe "\$APP_NAME" >/dev/null 2>&1; then
+  pm2 delete "\$APP_NAME"
 fi
-PORT="$APP_PORT" pm2 start npm --name "$APP_NAME" --cwd "$APP_DIR" -- start -- -p "$APP_PORT"
+PORT="\$APP_PORT" pm2 start npm --name "\$APP_NAME" --cwd "\$APP_DIR" -- start -- -p "\$APP_PORT"
 pm2 save
-REMOTE
 
-echo "Running health check"
-"${SSH[@]}" "bash -se" <<REMOTE
-set -euo pipefail
 for attempt in \$(seq 1 20); do
-  if curl -fsS --max-time 5 "http://127.0.0.1:$APP_PORT/api/health" >/tmp/"$APP_NAME"-health.json; then
-    cat /tmp/"$APP_NAME"-health.json
+  if curl -fsS --max-time 5 "http://127.0.0.1:\$APP_PORT/api/health" >/tmp/"\$APP_NAME"-health.json; then
+    cat /tmp/"\$APP_NAME"-health.json
+    printf '%s\n' "\$deploy_commit" > "\$BASE_DIR/shared/last-successful-commit"
+    printf '%s\n' "\$previous_commit" > "\$BASE_DIR/shared/previous-commit"
+    echo
+    echo "Deployed commit \$deploy_commit"
     exit 0
   fi
   sleep 2
 done
-echo "Health check failed. Fix the current build and rerun deploy." >&2
+
+echo "Health check failed for \$deploy_commit." >&2
+if [ -n "\$previous_commit" ]; then
+  echo "Previous commit was \$previous_commit. Run scripts/rollback.sh \$previous_commit after checking logs." >&2
+fi
 exit 1
 REMOTE
 
