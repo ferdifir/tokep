@@ -1,5 +1,10 @@
 import crypto from "node:crypto";
 import { prisma } from "@/lib/db";
+import {
+  getTelegramBotToken,
+  isDevTelegramFallbackEnabled,
+  isProduction,
+} from "@/lib/env";
 
 type TelegramInitUser = {
   first_name?: string;
@@ -10,10 +15,17 @@ type TelegramInitUser = {
 };
 
 const devTelegramUser: TelegramInitUser = {
-  first_name: "Ferdifir",
+  first_name: "Pengguna",
   id: 8800000001,
-  username: "ferdifir",
+  username: "tokep_dev",
 };
+
+export class UnauthorizedTelegramError extends Error {
+  constructor(message = "Telegram initData tidak valid") {
+    super(message);
+    this.name = "UnauthorizedTelegramError";
+  }
+}
 
 function parseInitData(initData: string) {
   const params = new URLSearchParams(initData);
@@ -71,12 +83,27 @@ function userFromInitData(initData: string) {
 
 export async function getOrCreateRequestUser(request: Request) {
   const initData = request.headers.get("x-telegram-init-data") ?? "";
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const botToken = getTelegramBotToken();
   const verified =
     initData && botToken ? verifyTelegramInitData(initData, botToken) : false;
-  const telegramUser =
-    verified && initData ? (userFromInitData(initData) ?? devTelegramUser) : devTelegramUser;
+  const parsedUser = verified && initData ? userFromInitData(initData) : null;
 
+  if (verified && parsedUser) {
+    return upsertTelegramUser(parsedUser);
+  }
+
+  if (isDevTelegramFallbackEnabled()) {
+    return upsertTelegramUser(devTelegramUser);
+  }
+
+  if (isProduction()) {
+    throw new UnauthorizedTelegramError();
+  }
+
+  throw new UnauthorizedTelegramError("Telegram initData wajib dikirim");
+}
+
+async function upsertTelegramUser(telegramUser: TelegramInitUser) {
   return prisma.user.upsert({
     create: {
       bio: null,
@@ -100,4 +127,24 @@ export async function getOrCreateRequestUser(request: Request) {
 
 export async function syncTelegramUser(request: Request) {
   return getOrCreateRequestUser(request);
+}
+
+export async function getOptionalRequestUser(request: Request) {
+  try {
+    return await getOrCreateRequestUser(request);
+  } catch (error) {
+    if (error instanceof UnauthorizedTelegramError) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+export function telegramAuthErrorResponse(error: unknown) {
+  if (error instanceof UnauthorizedTelegramError) {
+    return Response.json({ error: error.message }, { status: 401 });
+  }
+
+  return null;
 }

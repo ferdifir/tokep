@@ -1,60 +1,93 @@
 import { prisma } from "@/lib/db";
 import { getLimit, getSavedPage } from "@/lib/media-store";
-import { getOrCreateRequestUser } from "@/lib/telegram-auth";
+import {
+  getOrCreateRequestUser,
+  telegramAuthErrorResponse,
+} from "@/lib/telegram-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const user = await getOrCreateRequestUser(request);
-  const url = new URL(request.url);
-  const limit = getLimit(url.searchParams, 18);
-  const cursor = url.searchParams.get("cursor") ?? undefined;
-  const page = await getSavedPage({ cursor, limit, userId: user.id });
+  try {
+    const user = await getOrCreateRequestUser(request);
+    const url = new URL(request.url);
+    const limit = getLimit(url.searchParams, 18);
+    const cursor = url.searchParams.get("cursor") ?? undefined;
+    const page = await getSavedPage({ cursor, limit, userId: user.id });
 
-  return Response.json(page);
+    return Response.json(page);
+  } catch (error) {
+    const authResponse = telegramAuthErrorResponse(error);
+
+    if (authResponse) {
+      return authResponse;
+    }
+
+    throw error;
+  }
 }
 
 export async function POST(request: Request) {
-  const user = await getOrCreateRequestUser(request);
-  const body = (await request.json()) as { mediaId?: string };
+  try {
+    const user = await getOrCreateRequestUser(request);
+    const body = (await request.json()) as { mediaId?: string };
 
-  if (!body.mediaId) {
-    return Response.json({ error: "mediaId is required" }, { status: 400 });
-  }
+    if (!body.mediaId) {
+      return Response.json({ error: "mediaId is required" }, { status: 400 });
+    }
 
-  const saved = await prisma.savedMedia.upsert({
-    create: {
-      mediaId: body.mediaId,
-      userId: user.id,
-    },
-    update: {},
-    where: {
-      userId_mediaId: {
+    const saved = await prisma.savedMedia.upsert({
+      create: {
         mediaId: body.mediaId,
         userId: user.id,
       },
-    },
-  });
+      update: {},
+      where: {
+        userId_mediaId: {
+          mediaId: body.mediaId,
+          userId: user.id,
+        },
+      },
+    });
 
-  return Response.json({ saved: true, savedId: saved.id });
+    return Response.json({ saved: true, savedId: saved.id });
+  } catch (error) {
+    const authResponse = telegramAuthErrorResponse(error);
+
+    if (authResponse) {
+      return authResponse;
+    }
+
+    throw error;
+  }
 }
 
 export async function DELETE(request: Request) {
-  const user = await getOrCreateRequestUser(request);
-  const url = new URL(request.url);
-  const mediaId = url.searchParams.get("mediaId");
+  try {
+    const user = await getOrCreateRequestUser(request);
+    const url = new URL(request.url);
+    const mediaId = url.searchParams.get("mediaId");
 
-  if (!mediaId) {
-    return Response.json({ error: "mediaId is required" }, { status: 400 });
+    if (!mediaId) {
+      return Response.json({ error: "mediaId is required" }, { status: 400 });
+    }
+
+    await prisma.savedMedia.deleteMany({
+      where: {
+        mediaId,
+        userId: user.id,
+      },
+    });
+
+    return Response.json({ saved: false });
+  } catch (error) {
+    const authResponse = telegramAuthErrorResponse(error);
+
+    if (authResponse) {
+      return authResponse;
+    }
+
+    throw error;
   }
-
-  await prisma.savedMedia.deleteMany({
-    where: {
-      mediaId,
-      userId: user.id,
-    },
-  });
-
-  return Response.json({ saved: false });
 }

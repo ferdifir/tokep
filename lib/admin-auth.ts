@@ -1,5 +1,10 @@
 import crypto from "node:crypto";
 import { prisma } from "@/lib/db";
+import {
+  getAdminOtpCooldownSeconds,
+  getAdminSessionSecret,
+  isProduction,
+} from "@/lib/env";
 
 export const adminSessionCookie = "tokep_admin_session";
 const otpTtlMs = 5 * 60 * 1000;
@@ -10,11 +15,7 @@ function getAdminTelegramId() {
 }
 
 function getSecret() {
-  return (
-    process.env.ADMIN_SESSION_SECRET ??
-    process.env.DATABASE_URL ??
-    "tokep-development-secret"
-  );
+  return getAdminSessionSecret();
 }
 
 function hashValue(value: string) {
@@ -42,7 +43,7 @@ export async function sendAdminOtp(code: string) {
   const telegramId = getAdminTelegramId();
 
   if (!botToken) {
-    if (process.env.NODE_ENV === "production") {
+    if (isProduction()) {
       throw new Error("TELEGRAM_BOT_TOKEN is required to send admin OTP");
     }
 
@@ -70,6 +71,21 @@ export async function sendAdminOtp(code: string) {
 
 export async function createAdminOtp() {
   const telegramId = getAdminTelegramId();
+  const cooldownAfter = new Date(Date.now() - getAdminOtpCooldownSeconds() * 1000);
+  const recentOtp = await prisma.adminOtp.findFirst({
+    orderBy: { createdAt: "desc" },
+    where: {
+      createdAt: {
+        gt: cooldownAfter,
+      },
+      telegramId,
+    },
+  });
+
+  if (recentOtp) {
+    throw new Error("OTP sudah dikirim. Tunggu sebentar sebelum meminta ulang.");
+  }
+
   const code = generateOtp();
 
   await prisma.adminOtp.create({
@@ -169,7 +185,7 @@ export async function requireAdmin(request: Request) {
 }
 
 export function adminCookieHeader(token: string, expiresAt: Date) {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  const secure = isProduction() ? "; Secure" : "";
 
   return `${adminSessionCookie}=${encodeURIComponent(
     token,

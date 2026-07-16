@@ -1,7 +1,6 @@
 import { BottomNav } from "@/app/components/bottom-nav";
 import { ServiceCatalog } from "@/app/components/service-catalog";
 import {
-  ensureDemoServiceListings,
   getServicePage,
   serviceCategories,
 } from "@/lib/service-store";
@@ -9,7 +8,6 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function ServicePage() {
-  await ensureDemoServiceListings();
   const services = await getServicePage({});
 
   return (

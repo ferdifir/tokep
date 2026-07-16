@@ -120,6 +120,7 @@ model ServiceClaim {
   listing   ServiceListing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([listingId, userId])
   @@index([listingId, status, createdAt])
   @@index([userId, createdAt])
 }
@@ -168,6 +169,7 @@ model ServiceRecommendation {
   listing   ServiceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([listingId, userId])
   @@index([listingId, createdAt])
   @@index([userId, createdAt])
 }
@@ -182,6 +184,7 @@ model ServiceReport {
   listing   ServiceListing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
   user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([listingId, userId])
   @@index([listingId, createdAt])
   @@index([userId, createdAt])
 }

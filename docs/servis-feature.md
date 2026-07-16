@@ -97,8 +97,8 @@ Saat laporan masuk:
 
 - `ServiceReport` dibuat.
 - `reportCount` bertambah.
-- `ServiceListing.status` berubah menjadi `FLAGGED`.
-- Kartu tetap tampil, tetapi diberi peringatan.
+- Jika jumlah laporan unik mencapai `SERVICE_REPORT_FLAG_THRESHOLD`, `ServiceListing.status` berubah menjadi `FLAGGED`.
+- Kartu tetap tampil, tetapi diberi peringatan setelah threshold tercapai.
 
 Status yang disarankan:
 
@@ -157,9 +157,17 @@ Implementasi saat ini sudah menyimpan data ke database:
 - Klaim.
 - Metadata AI/fallback: kategori, tag, label kualitas, dan ringkasan.
 
-Data dummy akan otomatis dibuat jika tabel `ServiceListing` masih kosong, supaya tab Servis langsung punya contoh tampilan. Nantinya seed dummy bisa dipindah ke script development-only jika data produksi sudah tersedia.
+Data dummy tidak dibuat otomatis saat request user. Seed/demo harus dijalankan secara eksplisit di development agar data produksi tidak tercampur contoh.
+
+Guard abuse dasar:
+
+- Satu user hanya punya satu rekomendasi per listing. Submit ulang akan memperbarui rekomendasi lama.
+- Satu user hanya punya satu laporan per listing. Submit ulang akan memperbarui alasan/detail lama.
+- Satu user hanya punya satu klaim per listing. Submit ulang akan memperbarui bukti klaim lama.
+- Constraint unik juga disimpan di database untuk menahan request paralel.
 
 Environment:
 
 - `GROQ_API_KEY`: API key Groq untuk analisis kategori/review.
 - `GROQ_MODEL`: opsional, default `openai/gpt-oss-20b`.
+- `SERVICE_REPORT_FLAG_THRESHOLD`: jumlah laporan unik sebelum listing diberi peringatan.

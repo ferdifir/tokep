@@ -1,5 +1,6 @@
 import { analyzeServiceContent } from "@/lib/service-ai";
 import { prisma } from "@/lib/db";
+import { getServiceReportFlagThreshold } from "@/lib/env";
 import type {
   ServiceClaim,
   ServiceListing,
@@ -426,28 +427,53 @@ export async function recommendServiceListing({
     review,
     title: current.title,
   });
-
-  await prisma.serviceRecommendation.create({
-    data: {
+  const existing = await prisma.serviceRecommendation.findFirst({
+    where: {
       listingId,
-      review,
-      tags: tags?.length ? tags : ai.tags,
       userId,
     },
   });
 
+  if (existing) {
+    await prisma.serviceRecommendation.update({
+      data: {
+        review,
+        tags: tags?.length ? tags : ai.tags,
+      },
+      where: { id: existing.id },
+    });
+  } else {
+    await prisma.serviceRecommendation.create({
+      data: {
+        listingId,
+        review,
+        tags: tags?.length ? tags : ai.tags,
+        userId,
+      },
+    });
+  }
+
+  const reviewCount = await prisma.serviceRecommendation.count({
+    where: {
+      listingId,
+      review: {
+        not: null,
+      },
+    },
+  });
+  const recommendationCount = await prisma.serviceRecommendation.count({
+    where: {
+      listingId,
+    },
+  });
   const mergedTags = [...new Set([...current.tags, ...ai.tags])].slice(0, 8);
   const updated = await prisma.serviceListing.update({
     data: {
       aiSummary: ai.summary,
       category: ai.category,
       qualityLabel: ai.qualityLabel,
-      recommendationCount: {
-        increment: 1,
-      },
-      reviewCount: {
-        increment: 1,
-      },
+      recommendationCount,
+      reviewCount,
       tags: mergedTags,
     },
     include: {
@@ -480,21 +506,38 @@ export async function reportServiceListing({
   reason: ServiceReportReason;
   userId: string;
 }) {
-  await prisma.serviceReport.create({
-    data: {
-      detail,
+  const existing = await prisma.serviceReport.findFirst({
+    where: {
       listingId,
-      reason,
       userId,
     },
   });
 
+  if (existing) {
+    await prisma.serviceReport.update({
+      data: {
+        detail,
+        reason,
+      },
+      where: { id: existing.id },
+    });
+  } else {
+    await prisma.serviceReport.create({
+      data: {
+        detail,
+        listingId,
+        reason,
+        userId,
+      },
+    });
+  }
+
+  const reportCount = await prisma.serviceReport.count({ where: { listingId } });
+  const status = reportCount >= getServiceReportFlagThreshold() ? "FLAGGED" : undefined;
   const updated = await prisma.serviceListing.update({
     data: {
-      reportCount: {
-        increment: 1,
-      },
-      status: "FLAGGED",
+      reportCount,
+      ...(status ? { status } : {}),
     },
     include: {
       claims: {
@@ -532,15 +575,33 @@ export async function claimServiceListing({
   const status =
     listing.ownerId && listing.ownerId !== userId ? "DISPUTED" : "PENDING";
 
-  await prisma.serviceClaim.create({
-    data: {
-      evidence,
+  const existing = await prisma.serviceClaim.findFirst({
+    where: {
       listingId,
-      method,
-      status,
       userId,
     },
   });
+
+  if (existing) {
+    await prisma.serviceClaim.update({
+      data: {
+        evidence,
+        method,
+        status,
+      },
+      where: { id: existing.id },
+    });
+  } else {
+    await prisma.serviceClaim.create({
+      data: {
+        evidence,
+        listingId,
+        method,
+        status,
+        userId,
+      },
+    });
+  }
 
   const updated = await prisma.serviceListing.findUniqueOrThrow({
     include: {

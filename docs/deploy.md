@@ -58,6 +58,18 @@ The server must already have:
 /var/www/tokep/shared/konten
 ```
 
+Use `.env.production.example` as the template for
+`/var/www/tokep/shared/.env.production`. Production must set at least:
+
+- `DATABASE_URL`
+- `TELEGRAM_BOT_TOKEN`
+- `ADMIN_SESSION_SECRET`
+- `ADMIN_TELEGRAM_ID`
+
+Local development can copy `.env.development.example` to `.env`. Development may
+use `ALLOW_DEV_TELEGRAM_FALLBACK=1`; production never accepts the dummy Telegram
+user.
+
 `konten/` is not committed. Media sync is handled from the server-side shared
 folder.
 
