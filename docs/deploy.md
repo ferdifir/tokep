@@ -78,3 +78,35 @@ folder.
 Deploy runs `prisma migrate deploy`. Rollback does not reverse database
 migrations. If a release includes a migration, keep it backward-compatible with
 the previous app version or prepare a manual database recovery plan.
+
+## Database Backup
+
+Create a production database backup on the server:
+
+```bash
+scripts/db-backup.sh
+```
+
+By default backups are stored in:
+
+```text
+/var/www/tokep/backups/db
+```
+
+The script writes a PostgreSQL custom dump plus a `.sha256` checksum and deletes
+backups older than `BACKUP_RETENTION_DAYS` days, default `14`.
+
+Suggested daily cron on the server:
+
+```cron
+15 2 * * * cd /var/www/tokep/current && BACKUP_RETENTION_DAYS=14 scripts/db-backup.sh >> /var/log/tokep-db-backup.log 2>&1
+```
+
+Restore is intentionally guarded:
+
+```bash
+CONFIRM_RESTORE=1 scripts/db-restore.sh /var/www/tokep/backups/db/tokep-YYYYMMDDTHHMMSSZ.dump
+```
+
+Run restore only after stopping traffic or confirming the app can tolerate the
+database being replaced. Restore does not sync media files in `konten/`.
