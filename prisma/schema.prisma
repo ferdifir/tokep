@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MediaType {
+  VIDEO
+  PHOTO
+}
+
+enum ServiceClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DISPUTED
+}
+
+enum ServiceReportReason {
+  NO_SHOW
+  PRICE_MISMATCH
+  POOR_RESULT
+  POOR_COMMUNICATION
+  SUSPECTED_FRAUD
+  OTHER
+}
+
+enum ServiceStatus {
+  ACTIVE
+  FLAGGED
+  RESTRICTED
+  HIDDEN
+}
+
+model User {
+  id                     String                  @id @default(cuid())
+  telegramId             BigInt                  @unique
+  firstName              String?
+  lastName               String?
+  username               String?
+  photoUrl               String?
+  bio                    String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  savedMedia             SavedMedia[]
+  ownedServiceListings   ServiceListing[]        @relation("ServiceOwner")
+  serviceClaims          ServiceClaim[]
+  serviceRecommendations ServiceRecommendation[]
+  serviceReports         ServiceReport[]
+  submittedServices      ServiceListing[]        @relation("ServiceSubmitter")
+
+  @@index([username])
+}
+
+model Media {
+  id         String       @id @default(cuid())
+  type       MediaType
+  filename   String       @unique
+  src        String
+  title      String
+  visible    Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @default(now()) @updatedAt
+  savedMedia SavedMedia[]
+
+  @@index([type, visible, id])
+}
+
+model SavedMedia {
+  id        String   @id @default(cuid())
+  userId    String
+  mediaId   String
+  createdAt DateTime @default(now())
+  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mediaId])
+  @@index([userId, createdAt, id])
+}
+
+model AdminOtp {
+  id         String    @id @default(cuid())
+  telegramId BigInt
+  codeHash   String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([telegramId, createdAt])
+}
+
+model AdminSession {
+  id         String   @id @default(cuid())
+  telegramId BigInt
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([telegramId, expiresAt])
+}
+
+model ServiceClaim {
+  id        String             @id @default(cuid())
+  listingId String
+  userId    String
+  method    String
+  evidence  String?
+  status    ServiceClaimStatus @default(PENDING)
+  adminNote String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  listing   ServiceListing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, status, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ServiceListing {
+  id                  String                  @id @default(cuid())
+  title               String
+  providerName        String
+  initials            String
+  category            String
+  tags                String[]                @default([])
+  location            String
+  description         String
+  contact             String?
+  qualityLabel        String?
+  aiSummary           String?
+  rating              Float                   @default(0)
+  reviewCount         Int                     @default(0)
+  recommendationCount Int                     @default(0)
+  reportCount         Int                     @default(0)
+  status              ServiceStatus           @default(ACTIVE)
+  verified            Boolean                 @default(false)
+  ownerId             String?
+  submittedById       String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  claims              ServiceClaim[]
+  owner               User?                   @relation("ServiceOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  recommendations     ServiceRecommendation[]
+  reports             ServiceReport[]
+  submittedBy         User?                   @relation("ServiceSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+
+  @@index([category, status, createdAt])
+  @@index([ownerId])
+  @@index([submittedById])
+}
+
+model ServiceRecommendation {
+  id        String         @id @default(cuid())
+  listingId String
+  userId    String
+  rating    Int?
+  review    String?
+  tags      String[]       @default([])
+  createdAt DateTime       @default(now())
+  listing   ServiceListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ServiceReport {
+  id        String              @id @default(cuid())
+  listingId String
+  userId    String
+  reason    ServiceReportReason
+  detail    String?
+  createdAt DateTime            @default(now())
+  listing   ServiceListing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, createdAt])
+  @@index([userId, createdAt])
+}
