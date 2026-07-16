@@ -239,7 +239,7 @@ export function VideoFeed({
         <div>
           <p className="text-lg font-semibold">Belum ada video</p>
           <p className="mt-2 text-sm text-white/60">
-            Tambahkan file MP4 ke folder konten.
+            Tambahkan file MP4 ke folder konten/video.
           </p>
         </div>
       </main>

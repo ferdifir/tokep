@@ -56,12 +56,13 @@ current_commit="\$(git rev-parse HEAD)"
 git checkout --force "\$target_commit"
 
 test -f "\$BASE_DIR/shared/.env.production"
+mkdir -p "\$BASE_DIR/shared/konten/video" "\$BASE_DIR/shared/konten/foto"
 ln -sfn "\$BASE_DIR/shared/.env.production" .env
 ln -sfn "\$BASE_DIR/shared/konten" konten
 
 npm ci
 npm run db:generate
-npm run media:sync
+npm run media:index
 npm run build
 
 if pm2 describe "\$APP_NAME" >/dev/null 2>&1; then

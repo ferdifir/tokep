@@ -220,21 +220,6 @@ export function AdminDashboard() {
     await loadMedia(null, true);
   }
 
-  async function syncMedia() {
-    setMessage("Menyinkronkan media...");
-
-    const response = await fetch("/api/admin/media/sync", { method: "POST" });
-    const data = (await response.json()) as { synced?: number; error?: string };
-
-    if (!response.ok) {
-      setMessage(data.error ?? "Sync gagal");
-      return;
-    }
-
-    setMessage(`Sync selesai: ${data.synced} item`);
-    await refreshMedia();
-  }
-
   async function uploadMedia(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -432,7 +417,6 @@ export function AdminDashboard() {
             search={search}
             setSearch={setSearch}
             setType={setType}
-            syncMedia={syncMedia}
             type={type}
             updateMedia={updateMedia}
             updateMediaTags={updateMediaTags}
@@ -544,7 +528,6 @@ function ContentAdmin({
   search,
   setSearch,
   setType,
-  syncMedia,
   type,
   updateMedia,
   updateMediaTags,
@@ -561,7 +544,6 @@ function ContentAdmin({
   search: string;
   setSearch: (value: string) => void;
   setType: (value: string) => void;
-  syncMedia: () => Promise<void>;
   type: string;
   updateMedia: (id: string, body: Partial<AdminMedia>) => Promise<void>;
   updateMediaTags: (id: string, tags: string[]) => Promise<void>;
@@ -570,19 +552,8 @@ function ContentAdmin({
 }) {
   return (
     <>
-      <div className="mt-5 flex justify-end">
-        <button
-          className="h-10 rounded-md bg-white px-4 text-sm font-semibold text-black"
-          onClick={syncMedia}
-          type="button"
-        >
-          <RefreshCw className="mr-2 inline" size={16} />
-          Sync
-        </button>
-      </div>
-
       <form
-        className="mt-4 grid gap-3 rounded-md border border-white/10 bg-zinc-950 p-4 md:grid-cols-[1fr_1fr_auto]"
+        className="mt-5 grid gap-3 rounded-md border border-white/10 bg-zinc-950 p-4 md:grid-cols-[1fr_1fr_auto]"
         onSubmit={uploadMedia}
       >
         <input

@@ -2,7 +2,7 @@ import { stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { contentDir } from "@/lib/media-paths";
+import { videoDir } from "@/lib/media-paths";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,9 +21,9 @@ function safeVideoPath(name: string) {
     return null;
   }
 
-  const filePath = path.join(/* turbopackIgnore: true */ contentDir, baseName);
+  const filePath = path.join(/* turbopackIgnore: true */ videoDir, baseName);
 
-  if (!filePath.startsWith(`${contentDir}${path.sep}`)) {
+  if (!filePath.startsWith(`${videoDir}${path.sep}`)) {
     return null;
   }
 

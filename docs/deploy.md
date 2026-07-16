@@ -55,7 +55,8 @@ The server must already have:
 
 ```text
 /var/www/tokep/shared/.env.production
-/var/www/tokep/shared/konten
+/var/www/tokep/shared/konten/video
+/var/www/tokep/shared/konten/foto
 ```
 
 Use `.env.production.example` as the template for
@@ -70,8 +71,9 @@ Local development can copy `.env.development.example` to `.env`. Development may
 use `ALLOW_DEV_TELEGRAM_FALLBACK=1`; production never accepts the dummy Telegram
 user.
 
-`konten/` is not committed. Media sync is handled from the server-side shared
-folder.
+`konten/` is not committed. Videos are read only from `konten/video`, and
+photos are read only from `konten/foto`. Deploy indexes the server-side shared
+folder into the database; it does not upload or download media.
 
 ## Database Note
 
@@ -109,4 +111,4 @@ CONFIRM_RESTORE=1 scripts/db-restore.sh /var/www/tokep/backups/db/tokep-YYYYMMDD
 ```
 
 Run restore only after stopping traffic or confirming the app can tolerate the
-database being replaced. Restore does not sync media files in `konten/`.
+database being replaced. Restore does not move media files in `konten/`.

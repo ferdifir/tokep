@@ -24,7 +24,7 @@ BASE_DIR="$BASE_DIR"
 REPO_URL="$REPO_URL"
 DEPLOY_REF="$DEPLOY_REF"
 
-mkdir -p "\$BASE_DIR/shared/konten"
+mkdir -p "\$BASE_DIR/shared/konten/video" "\$BASE_DIR/shared/konten/foto"
 
 if [ ! -d "\$APP_DIR/.git" ]; then
   rm -rf "\$APP_DIR"
@@ -50,7 +50,7 @@ ln -sfn "\$BASE_DIR/shared/konten" konten
 npm ci
 npm run db:generate
 npx prisma migrate deploy
-npm run media:sync
+npm run media:index
 npm run build
 
 if pm2 describe "\$APP_NAME" >/dev/null 2>&1; then

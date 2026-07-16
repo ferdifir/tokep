@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/db";
-import { contentDir, photoDir } from "@/lib/media-paths";
+import { photoDir, videoDir } from "@/lib/media-paths";
 import { getPhotoContentType, isPhotoFile } from "@/lib/photos";
 
 export const maxPhotoSize = 10 * 1024 * 1024;
@@ -32,7 +32,7 @@ export function detectMediaKind(filename: string, type: string): UploadedMediaKi
 }
 
 export function getMediaDirectory(kind: UploadedMediaKind) {
-  return kind === "photo" ? photoDir : contentDir;
+  return kind === "photo" ? photoDir : videoDir;
 }
 
 export function mediaSrcForFilename(kind: UploadedMediaKind, filename: string) {
@@ -84,11 +84,11 @@ function titleFromVideo(filename: string, index: number) {
   return `Video ${index + 1}`;
 }
 
-export async function syncMediaDirectory() {
-  await Promise.all([mkdir(contentDir, { recursive: true }), mkdir(photoDir, { recursive: true })]);
+export async function indexMediaDirectory() {
+  await Promise.all([mkdir(videoDir, { recursive: true }), mkdir(photoDir, { recursive: true })]);
 
   const [videoEntries, photoEntries] = await Promise.all([
-    readdir(contentDir).catch(() => [] as string[]),
+    readdir(videoDir).catch(() => [] as string[]),
     readdir(photoDir).catch(() => [] as string[]),
   ]);
   const videos = videoEntries

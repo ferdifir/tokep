@@ -1,5 +1,5 @@
 import { readdir } from "node:fs/promises";
-import { contentDir } from "@/lib/media-paths";
+import { videoDir } from "@/lib/media-paths";
 
 export type FeedVideo = {
   id: string;
@@ -23,7 +23,7 @@ export async function getFeedVideos(): Promise<FeedVideo[]> {
   let entries: string[];
 
   try {
-    entries = await readdir(contentDir);
+    entries = await readdir(videoDir);
   } catch {
     return [];
   }

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a fast Telegram Mini App MVP that feels like a TikTok-style vertical video feed using the existing local video files in `konten/`.
+Build a fast Telegram Mini App MVP that feels like a TikTok-style vertical video feed using the existing local video files in `konten/video`.
 
 The first release is not a generic video player. It should prioritize fast feed navigation, reliable autoplay, and a polished full-screen browsing experience.
 
@@ -17,7 +17,7 @@ Included:
 - Pause inactive videos to reduce CPU, battery, and network usage.
 - Preload nearby videos so swiping feels quick.
 - Minimal controls: tap play/pause, mute toggle, active progress, loading state.
-- Local content discovery from the existing `konten/` MP4 files.
+- Local content discovery from the existing `konten/video` MP4 files.
 - Telegram-safe responsive layout, primarily mobile-first.
 
 Excluded from MVP:
@@ -44,10 +44,10 @@ The app stays within the existing Next.js App Router scaffold.
 
 - `app/page.tsx` renders the feed shell.
 - A client component owns scroll position, active item detection, autoplay, pause, mute, and preload behavior.
-- A server-side helper or generated manifest lists the MP4 files from `konten/`.
+- A server-side helper or generated manifest lists the MP4 files from `konten/video`.
 - Video metadata passed to the client is simple: `id`, `src`, `title`, and filename-derived display data.
 
-The `konten/` files need to be browser-addressable. The preferred MVP path is to expose them through a route handler or a static asset copy step without changing their source folder manually.
+The `konten/video` files need to be browser-addressable. The preferred MVP path is to expose them through a route handler or a static asset copy step without changing their source folder manually.
 
 ## Video Feed Behavior
 

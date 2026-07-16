@@ -1,11 +1,11 @@
 import "dotenv/config";
 import { prisma } from "@/lib/db";
-import { syncMediaDirectory } from "@/lib/server-media";
+import { indexMediaDirectory } from "@/lib/server-media";
 
 async function main() {
-  const result = await syncMediaDirectory();
+  const result = await indexMediaDirectory();
 
-  console.log(`Synced ${result.synced} media items`);
+  console.log(`Indexed ${result.synced} media items`);
 }
 
 main()

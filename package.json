@@ -1,6 +1,6 @@
 {
   "name": "tokep",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,8 +9,8 @@
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:seed": "npm run media:sync",
-    "media:sync": "tsx scripts/sync-media.ts"
+    "db:seed": "npm run media:index",
+    "media:index": "tsx scripts/index-media.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
