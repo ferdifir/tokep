@@ -175,6 +175,13 @@ Guard abuse dasar:
 - Satu user hanya punya satu laporan per listing. Submit ulang akan memperbarui alasan/detail lama.
 - Satu user hanya punya satu klaim per listing. Submit ulang akan memperbarui bukti klaim lama.
 - Constraint unik juga disimpan di database untuk menahan request paralel.
+- Rate limit berbasis Postgres menahan spam:
+  - Tambah jasa: 10 request per user per jam.
+  - Rekomendasi: 20 request per user per jam.
+  - Laporan: 10 request per user per jam.
+  - Klaim: 5 request per user per jam.
+  - Save/unsave media: 120 request per user per menit.
+  - Request OTP admin: 5 request per IP per 10 menit, ditambah cooldown OTP.
 
 Environment:
 

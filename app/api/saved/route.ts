@@ -4,6 +4,7 @@ import {
   getOrCreateRequestUser,
   telegramAuthErrorResponse,
 } from "@/lib/telegram-auth";
+import { requireRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,16 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await getOrCreateRequestUser(request);
+    const limited = await requireRateLimit({
+      key: `media-save:${user.id}`,
+      limit: 120,
+      windowMs: 60 * 1000,
+    });
+
+    if (limited) {
+      return limited;
+    }
+
     const body = (await request.json()) as { mediaId?: string };
 
     if (!body.mediaId) {
@@ -66,6 +77,16 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const user = await getOrCreateRequestUser(request);
+    const limited = await requireRateLimit({
+      key: `media-save:${user.id}`,
+      limit: 120,
+      windowMs: 60 * 1000,
+    });
+
+    if (limited) {
+      return limited;
+    }
+
     const url = new URL(request.url);
     const mediaId = url.searchParams.get("mediaId");
 

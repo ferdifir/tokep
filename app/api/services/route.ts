@@ -8,6 +8,7 @@ import {
   getOrCreateRequestUser,
   telegramAuthErrorResponse,
 } from "@/lib/telegram-auth";
+import { requireRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,16 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const user = await getOrCreateRequestUser(request);
+    const limited = await requireRateLimit({
+      key: `service-create:${user.id}`,
+      limit: 10,
+      windowMs: 60 * 60 * 1000,
+    });
+
+    if (limited) {
+      return limited;
+    }
+
     const body = (await request.json()) as {
       contact?: string;
       description?: string;
