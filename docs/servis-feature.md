@@ -139,6 +139,13 @@ Admin tidak perlu mengatur semua listing secara manual. Admin berperan untuk:
 - Menaikkan status listing ke `RESTRICTED` atau `HIDDEN`.
 - Meninjau laporan berat seperti dugaan penipuan.
 
+Semua event yang membutuhkan tindakan admin mengirim notifikasi Telegram ke
+`ADMIN_TELEGRAM_ID` jika `TELEGRAM_BOT_TOKEN` tersedia:
+
+- Listing jasa baru yang perlu review.
+- Klaim listing baru atau klaim sengketa.
+- Laporan yang mencapai threshold peringatan atau alasan dugaan penipuan.
+
 Dasar keputusan admin:
 
 - Apakah user menguasai kontak publik listing.
@@ -156,6 +163,9 @@ Implementasi saat ini sudah menyimpan data ke database:
 - Laporan.
 - Klaim.
 - Metadata AI/fallback: kategori, tag, label kualitas, dan ringkasan.
+- Queue admin untuk klaim, laporan, dan listing yang perlu review.
+- Aksi admin untuk approve/reject/dispute klaim.
+- Aksi admin untuk memberi status `ACTIVE`, `FLAGGED`, `RESTRICTED`, atau `HIDDEN`.
 
 Data dummy tidak dibuat otomatis saat request user. Seed/demo harus dijalankan secara eksplisit di development agar data produksi tidak tercampur contoh.
 
@@ -171,3 +181,4 @@ Environment:
 - `GROQ_API_KEY`: API key Groq untuk analisis kategori/review.
 - `GROQ_MODEL`: opsional, default `openai/gpt-oss-20b`.
 - `SERVICE_REPORT_FLAG_THRESHOLD`: jumlah laporan unik sebelum listing diberi peringatan.
+- `TELEGRAM_BOT_TOKEN` dan `ADMIN_TELEGRAM_ID`: notifikasi admin.

@@ -175,16 +175,19 @@ model ServiceRecommendation {
 }
 
 model ServiceReport {
-  id        String              @id @default(cuid())
-  listingId String
-  userId    String
-  reason    ServiceReportReason
-  detail    String?
-  createdAt DateTime            @default(now())
-  listing   ServiceListing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String              @id @default(cuid())
+  listingId  String
+  userId     String
+  reason     ServiceReportReason
+  detail     String?
+  adminNote  String?
+  reviewedAt DateTime?
+  createdAt  DateTime            @default(now())
+  listing    ServiceListing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([listingId, userId])
+  @@index([reviewedAt, createdAt])
   @@index([listingId, createdAt])
   @@index([userId, createdAt])
 }

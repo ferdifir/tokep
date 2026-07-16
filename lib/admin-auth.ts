@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { notifyAdmin } from "@/lib/admin-notify";
 import { prisma } from "@/lib/db";
 import {
   getAdminOtpCooldownSeconds,
@@ -40,7 +41,6 @@ export function generateSessionToken() {
 
 export async function sendAdminOtp(code: string) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const telegramId = getAdminTelegramId();
 
   if (!botToken) {
     if (isProduction()) {
@@ -50,20 +50,10 @@ export async function sendAdminOtp(code: string) {
     return { debugCode: code, sent: false };
   }
 
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    body: JSON.stringify({
-      chat_id: String(telegramId),
-      text: `Kode OTP admin Tokep: ${code}\nBerlaku 5 menit.`,
-    }),
-    headers: {
-      "Content-Type": "application/json",
-    },
-    method: "POST",
-  });
+  const result = await notifyAdmin(`Kode OTP admin Tokep: ${code}\nBerlaku 5 menit.`);
 
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Telegram sendMessage failed: ${detail}`);
+  if (!result.sent) {
+    throw new Error("Telegram sendMessage failed");
   }
 
   return { debugCode: null, sent: true };

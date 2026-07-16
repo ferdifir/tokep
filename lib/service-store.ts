@@ -1,8 +1,10 @@
 import { analyzeServiceContent } from "@/lib/service-ai";
+import { notifyAdmin } from "@/lib/admin-notify";
 import { prisma } from "@/lib/db";
 import { getServiceReportFlagThreshold } from "@/lib/env";
 import type {
   ServiceClaim,
+  ServiceClaimStatus,
   ServiceListing,
   ServiceRecommendation,
   ServiceReportReason,
@@ -37,6 +39,8 @@ export type ServiceReviewItem = {
   tags: string[];
   username: string;
 };
+
+export type AdminServiceQueue = Awaited<ReturnType<typeof getAdminServiceQueue>>;
 
 type ListingWithRelations = ServiceListing & {
   claims?: Pick<ServiceClaim, "status">[];
@@ -405,6 +409,15 @@ export async function createServiceListing({
     },
   });
 
+  await notifyAdmin(
+    [
+      "Tokep admin: listing jasa baru perlu review.",
+      `${listing.title} - ${listing.providerName}`,
+      `Lokasi: ${listing.location}`,
+      `Status pemilik: ${isOwner ? "dibuat pemilik" : "rekomendasi user"}`,
+    ].join("\n"),
+  );
+
   return listingToCatalogItem(listing, userId);
 }
 
@@ -516,8 +529,10 @@ export async function reportServiceListing({
   if (existing) {
     await prisma.serviceReport.update({
       data: {
+        adminNote: null,
         detail,
         reason,
+        reviewedAt: null,
       },
       where: { id: existing.id },
     });
@@ -554,6 +569,18 @@ export async function reportServiceListing({
     },
     where: { id: listingId },
   });
+
+  if (status || reason === "SUSPECTED_FRAUD") {
+    await notifyAdmin(
+      [
+        "Tokep admin: laporan jasa perlu review.",
+        `${updated.title} - ${updated.providerName}`,
+        `Alasan: ${reason}`,
+        `Total laporan unik: ${reportCount}`,
+        `Status listing: ${updated.status}`,
+      ].join("\n"),
+    );
+  }
 
   return listingToCatalogItem(updated, userId);
 }
@@ -620,5 +647,156 @@ export async function claimServiceListing({
     where: { id: listingId },
   });
 
+  await notifyAdmin(
+    [
+      "Tokep admin: klaim listing perlu review.",
+      `${updated.title} - ${updated.providerName}`,
+      `Status klaim: ${status}`,
+      `Metode: ${method}`,
+      evidence ? `Bukti: ${evidence}` : "Bukti: belum diisi",
+    ].join("\n"),
+  );
+
   return listingToCatalogItem(updated, userId);
+}
+
+export async function getAdminServiceQueue() {
+  const [listings, claims, reports] = await Promise.all([
+    prisma.serviceListing.findMany({
+      include: {
+        owner: {
+          select: { firstName: true, username: true },
+        },
+        submittedBy: {
+          select: { firstName: true, username: true },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 40,
+      where: {
+        OR: [
+          { verified: false },
+          { status: { in: ["FLAGGED", "RESTRICTED"] } },
+        ],
+      },
+    }),
+    prisma.serviceClaim.findMany({
+      include: {
+        listing: true,
+        user: {
+          select: { firstName: true, username: true },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 40,
+      where: {
+        status: {
+          in: ["PENDING", "DISPUTED"],
+        },
+      },
+    }),
+    prisma.serviceReport.findMany({
+      include: {
+        listing: true,
+        user: {
+          select: { firstName: true, username: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 40,
+      where: {
+        reviewedAt: null,
+      },
+    }),
+  ]);
+
+  return { claims, listings, reports };
+}
+
+export async function updateAdminServiceListing({
+  listingId,
+  status,
+  verified,
+}: {
+  listingId: string;
+  status?: ServiceStatus;
+  verified?: boolean;
+}) {
+  return prisma.serviceListing.update({
+    data: {
+      ...(status ? { status } : {}),
+      ...(typeof verified === "boolean" ? { verified } : {}),
+    },
+    where: { id: listingId },
+  });
+}
+
+export async function reviewAdminServiceReport({
+  adminNote,
+  reportId,
+  status,
+}: {
+  adminNote?: string | null;
+  reportId: string;
+  status?: ServiceStatus;
+}) {
+  const report = await prisma.serviceReport.update({
+    data: {
+      adminNote,
+      reviewedAt: new Date(),
+    },
+    include: {
+      listing: true,
+    },
+    where: { id: reportId },
+  });
+
+  if (status) {
+    await prisma.serviceListing.update({
+      data: { status },
+      where: { id: report.listingId },
+    });
+  }
+
+  return report;
+}
+
+export async function reviewAdminServiceClaim({
+  adminNote,
+  claimId,
+  status,
+}: {
+  adminNote?: string | null;
+  claimId: string;
+  status: ServiceClaimStatus;
+}) {
+  const claim = await prisma.serviceClaim.update({
+    data: {
+      adminNote,
+      status,
+    },
+    include: {
+      listing: true,
+      user: {
+        select: {
+          firstName: true,
+          id: true,
+          username: true,
+        },
+      },
+    },
+    where: { id: claimId },
+  });
+
+  if (status === "APPROVED") {
+    await prisma.serviceListing.update({
+      data: {
+        ownerId: claim.userId,
+        verified: true,
+      },
+      where: { id: claim.listingId },
+    });
+  }
+
+  return claim;
 }
