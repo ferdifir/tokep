@@ -1,3 +1,4 @@
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { requireAdmin } from "@/lib/admin-auth";
 import { reviewAdminServiceReport } from "@/lib/service-store";
 
@@ -29,6 +30,16 @@ export async function PATCH(
     adminNote: body.adminNote?.trim() || null,
     reportId: id,
     status,
+  });
+  await recordAdminAudit({
+    action: "service.report.review",
+    adminTelegramId: admin.telegramId,
+    metadata: {
+      adminNote: body.adminNote?.trim() || null,
+      listingStatus: status,
+    },
+    targetId: report.id,
+    targetType: "serviceReport",
   });
 
   return Response.json({ report });

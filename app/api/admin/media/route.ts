@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getLimit } from "@/lib/media-store";
 import { storeUploadedMedia } from "@/lib/server-media";
@@ -64,6 +65,17 @@ export async function POST(request: Request) {
       file,
       typeof title === "string" ? title : undefined,
     );
+    await recordAdminAudit({
+      action: "media.upload",
+      adminTelegramId: admin.telegramId,
+      metadata: {
+        filename: media.filename,
+        title: media.title,
+        type: media.type,
+      },
+      targetId: media.id,
+      targetType: "media",
+    });
 
     return Response.json({ media });
   } catch (error) {

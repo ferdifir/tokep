@@ -138,6 +138,7 @@ Admin tidak perlu mengatur semua listing secara manual. Admin berperan untuk:
 - Menangani klaim ganda.
 - Menaikkan status listing ke `RESTRICTED` atau `HIDDEN`.
 - Meninjau laporan berat seperti dugaan penipuan.
+- Melihat audit log aksi admin di tab `Audit`.
 
 Semua event yang membutuhkan tindakan admin mengirim notifikasi Telegram ke
 `ADMIN_TELEGRAM_ID` jika `TELEGRAM_BOT_TOKEN` tersedia:
@@ -166,6 +167,7 @@ Implementasi saat ini sudah menyimpan data ke database:
 - Queue admin untuk klaim, laporan, dan listing yang perlu review.
 - Aksi admin untuk approve/reject/dispute klaim.
 - Aksi admin untuk memberi status `ACTIVE`, `FLAGGED`, `RESTRICTED`, atau `HIDDEN`.
+- Audit log untuk upload/update/delete/sync media dan moderation servis.
 
 Data dummy tidak dibuat otomatis saat request user. Seed/demo harus dijalankan secara eksplisit di development agar data produksi tidak tercampur contoh.
 

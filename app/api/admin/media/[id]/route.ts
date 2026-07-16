@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { requireAdmin } from "@/lib/admin-auth";
 import { deleteMediaFile, mediaKindFromType } from "@/lib/server-media";
 
@@ -27,6 +28,13 @@ export async function PATCH(
     },
     where: { id },
   });
+  await recordAdminAudit({
+    action: "media.update",
+    adminTelegramId: admin.telegramId,
+    metadata: body,
+    targetId: media.id,
+    targetType: "media",
+  });
 
   return Response.json({ media });
 }
@@ -54,6 +62,18 @@ export async function DELETE(
   );
 
   await prisma.media.delete({ where: { id } });
+  await recordAdminAudit({
+    action: "media.delete",
+    adminTelegramId: admin.telegramId,
+    metadata: {
+      fileDeleted: fileResult.deleted,
+      filename: media.filename,
+      title: media.title,
+      warning: fileResult.warning,
+    },
+    targetId: media.id,
+    targetType: "media",
+  });
 
   return Response.json({
     deleted: true,

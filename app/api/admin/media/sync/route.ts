@@ -1,3 +1,4 @@
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { requireAdmin } from "@/lib/admin-auth";
 import { syncMediaDirectory } from "@/lib/server-media";
 
@@ -12,6 +13,12 @@ export async function POST(request: Request) {
   }
 
   const result = await syncMediaDirectory();
+  await recordAdminAudit({
+    action: "media.sync",
+    adminTelegramId: admin.telegramId,
+    metadata: result,
+    targetType: "media",
+  });
 
   return Response.json(result);
 }

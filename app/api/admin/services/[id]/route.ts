@@ -1,3 +1,4 @@
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { requireAdmin } from "@/lib/admin-auth";
 import { updateAdminServiceListing } from "@/lib/service-store";
 
@@ -27,6 +28,16 @@ export async function PATCH(
     listingId: id,
     status,
     verified: typeof body.verified === "boolean" ? body.verified : undefined,
+  });
+  await recordAdminAudit({
+    action: "service.listing.update",
+    adminTelegramId: admin.telegramId,
+    metadata: {
+      ...(status ? { status } : {}),
+      ...(typeof body.verified === "boolean" ? { verified: body.verified } : {}),
+    },
+    targetId: listing.id,
+    targetType: "serviceListing",
   });
 
   return Response.json({ listing });

@@ -107,6 +107,20 @@ model AdminSession {
   @@index([telegramId, expiresAt])
 }
 
+model AdminAuditLog {
+  id              String   @id @default(cuid())
+  adminTelegramId BigInt
+  action          String
+  targetType      String
+  targetId        String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+}
+
 model RateLimitBucket {
   id        String   @id @default(cuid())
   key       String   @unique

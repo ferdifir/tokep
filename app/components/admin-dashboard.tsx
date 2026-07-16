@@ -79,6 +79,21 @@ type ServiceQueue = {
   reports: AdminReport[];
 };
 
+type AdminAudit = {
+  action: string;
+  adminTelegramId: string;
+  createdAt: string;
+  id: string;
+  metadata: unknown;
+  targetId: string | null;
+  targetType: string;
+};
+
+type AuditPage = {
+  items: AdminAudit[];
+  nextCursor: string | null;
+};
+
 function userLabel(user?: AdminUser | null) {
   if (!user) {
     return "Tidak diketahui";
@@ -89,7 +104,7 @@ function userLabel(user?: AdminUser | null) {
 
 export function AdminDashboard() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
-  const [activeTab, setActiveTab] = useState<"content" | "services">("content");
+  const [activeTab, setActiveTab] = useState<"audit" | "content" | "services">("content");
   const [items, setItems] = useState<AdminMedia[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [type, setType] = useState("ALL");
@@ -103,6 +118,9 @@ export function AdminDashboard() {
     reports: [],
   });
   const [serviceLoading, setServiceLoading] = useState(false);
+  const [auditItems, setAuditItems] = useState<AdminAudit[]>([]);
+  const [auditNextCursor, setAuditNextCursor] = useState<string | null>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const loadMedia = useCallback(
@@ -155,6 +173,31 @@ export function AdminDashboard() {
     setServiceLoading(false);
   }, []);
 
+  const loadAudit = useCallback(async (cursor?: string | null, replace = false) => {
+    setAuditLoading(true);
+
+    const params = new URLSearchParams({ limit: "40" });
+
+    if (cursor) {
+      params.set("cursor", cursor);
+    }
+
+    const response = await fetch(`/api/admin/audit?${params}`);
+
+    if (response.status === 401) {
+      window.location.href = "/admin/login";
+      return;
+    }
+
+    const page = (await response.json()) as AuditPage;
+
+    setAuditItems((current) =>
+      replace ? page.items : [...current, ...page.items],
+    );
+    setAuditNextCursor(page.nextCursor);
+    setAuditLoading(false);
+  }, []);
+
   useEffect(() => {
     async function checkSession() {
       const response = await fetch("/api/admin/auth/session");
@@ -166,11 +209,11 @@ export function AdminDashboard() {
       }
 
       setAuthenticated(true);
-      await Promise.all([loadMedia(null, true), loadServices()]);
+      await Promise.all([loadMedia(null, true), loadServices(), loadAudit(null, true)]);
     }
 
     void checkSession();
-  }, [loadMedia, loadServices]);
+  }, [loadAudit, loadMedia, loadServices]);
 
   async function refreshMedia() {
     await loadMedia(null, true);
@@ -343,6 +386,17 @@ export function AdminDashboard() {
             >
               Servis
             </button>
+            <button
+              className={`h-10 rounded-md px-4 text-sm font-semibold ${
+                activeTab === "audit"
+                  ? "bg-white text-black"
+                  : "bg-white/10 text-white"
+              }`}
+              onClick={() => setActiveTab("audit")}
+              type="button"
+            >
+              Audit
+            </button>
           </div>
         </header>
 
@@ -370,7 +424,7 @@ export function AdminDashboard() {
             uploadMedia={uploadMedia}
             uploading={uploading}
           />
-        ) : (
+        ) : activeTab === "services" ? (
           <ServiceAdmin
             loading={serviceLoading}
             queue={serviceQueue}
@@ -379,9 +433,88 @@ export function AdminDashboard() {
             reviewReport={reviewReport}
             updateListing={updateListing}
           />
+        ) : (
+          <AuditAdmin
+            items={auditItems}
+            loadAudit={loadAudit}
+            loading={auditLoading}
+            nextCursor={auditNextCursor}
+          />
         )}
       </div>
     </main>
+  );
+}
+
+function AuditAdmin({
+  items,
+  loadAudit,
+  loading,
+  nextCursor,
+}: {
+  items: AdminAudit[];
+  loadAudit: (cursor?: string | null, replace?: boolean) => Promise<void>;
+  loading: boolean;
+  nextCursor: string | null;
+}) {
+  return (
+    <section className="mt-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">Audit Log</h2>
+        <button
+          className="h-10 rounded-md bg-white/10 px-4 text-sm font-semibold disabled:opacity-50"
+          disabled={loading}
+          onClick={() => loadAudit(null, true)}
+          type="button"
+        >
+          <RefreshCw className="mr-2 inline" size={16} />
+          Refresh
+        </button>
+      </div>
+
+      <div className="mt-3 grid gap-3">
+        {items.length ? (
+          items.map((item) => (
+            <article
+              className="rounded-md border border-white/10 bg-zinc-950 p-3"
+              key={item.id}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">{item.action}</p>
+                  <p className="mt-1 text-xs text-white/45">
+                    Admin {item.adminTelegramId} -{" "}
+                    {new Date(item.createdAt).toLocaleString("id-ID")}
+                  </p>
+                </div>
+                <span className="rounded-md bg-white/10 px-2 py-1 text-xs font-semibold text-white/65">
+                  {item.targetType}
+                  {item.targetId ? `:${item.targetId.slice(0, 8)}` : ""}
+                </span>
+              </div>
+              {item.metadata ? (
+                <pre className="mt-3 max-h-48 overflow-auto rounded-md bg-black p-3 text-xs leading-5 text-white/55">
+                  {JSON.stringify(item.metadata, null, 2)}
+                </pre>
+              ) : null}
+            </article>
+          ))
+        ) : (
+          <EmptyState text="Belum ada audit log." />
+        )}
+      </div>
+
+      {nextCursor ? (
+        <button
+          className="mt-5 h-11 w-full rounded-md bg-white/10 text-sm font-semibold disabled:opacity-50"
+          disabled={loading}
+          onClick={() => loadAudit(nextCursor)}
+          type="button"
+        >
+          {loading ? "Memuat..." : "Muat lagi"}
+        </button>
+      ) : null}
+    </section>
   );
 }
 
