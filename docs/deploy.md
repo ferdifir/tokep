@@ -123,5 +123,13 @@ npm run telegram:webhook
 ```
 
 The script registers `/api/telegram/webhook` for `@tokepaibot` and sets `/start`
-plus `/help`. `/start` replies with the Mini App feature summary and a button
-that opens the Mini App.
+plus `/help`. `/start` replies with the Mini App feature summary and buttons
+that open the Mini App.
+
+Telegram Mini App direct links use these formats:
+
+```text
+https://t.me/tokepaibot?startapp
+https://t.me/tokepaibot/<mini-app-short-name>?startapp
+https://t.me/tokepaibot/<mini-app-short-name>?startapp=<start-param>
+```

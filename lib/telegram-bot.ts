@@ -45,13 +45,15 @@ export function getMiniAppUrl() {
 
 export function getMiniAppDirectUrl() {
   const shortName = process.env.TELEGRAM_MINI_APP_SHORT_NAME?.trim();
+  const startParam = process.env.TELEGRAM_MINI_APP_START_PARAM?.trim();
   const botUsername = getBotUsername();
+  const query = startParam ? `?startapp=${encodeURIComponent(startParam)}` : "?startapp";
 
   if (shortName) {
-    return `https://t.me/${botUsername}/${shortName}`;
+    return `https://t.me/${botUsername}/${shortName}${query}`;
   }
 
-  return `https://t.me/${botUsername}?start=miniapp`;
+  return `https://t.me/${botUsername}${query}`;
 }
 
 function startMessage() {
