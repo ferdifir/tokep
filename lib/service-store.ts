@@ -7,8 +7,8 @@ import type {
   ServiceClaimStatus,
   ServiceListing,
   ServiceRecommendation,
-  ServiceReportReason,
   ServiceStatus,
+  ServiceReportReason,
 } from "@/lib/generated/prisma/client";
 
 export type ServiceCatalogItem = {
@@ -53,85 +53,6 @@ type ListingWithRelations = ServiceListing & {
     }
   >;
 };
-
-export const serviceCategories = [
-  "Semua",
-  "Rumah",
-  "Kreatif",
-  "Kecantikan",
-  "Digital",
-  "Lainnya",
-];
-
-const demoServices = [
-  {
-    description:
-      "Perbaikan listrik ringan, instalasi lampu, stop kontak, dan pengecekan panel.",
-    initials: "AR",
-    location: "Jakarta Selatan",
-    providerName: "Arman Teknik",
-    qualityLabel: "Direkomendasikan",
-    recommendationCount: 12,
-    reportCount: 0,
-    reviewCount: 48,
-    status: "ACTIVE" as ServiceStatus,
-    tags: ["listrik", "lampu", "stop kontak"],
-    title: "Teknisi listrik panggilan",
-    verified: true,
-  },
-  {
-    description:
-      "Foto produk, katalog UMKM, makanan, dan konten pendek untuk marketplace.",
-    initials: "NA",
-    location: "Bekasi",
-    providerName: "Nadia Studio",
-    qualityLabel: "Direkomendasikan",
-    recommendationCount: 5,
-    reportCount: 0,
-    reviewCount: 31,
-    status: "ACTIVE" as ServiceStatus,
-    tags: ["foto", "produk", "konten"],
-    title: "Fotografer produk",
-    verified: true,
-  },
-  {
-    description:
-      "Makeup wisuda, lamaran, bridesmaid, dan touch-up acara keluarga.",
-    initials: "LS",
-    location: "Tangerang",
-    providerName: "Laras Beauty",
-    qualityLabel: "Campuran",
-    recommendationCount: 8,
-    reportCount: 1,
-    reviewCount: 27,
-    status: "FLAGGED" as ServiceStatus,
-    tags: ["makeup", "wisuda"],
-    title: "MUA panggilan",
-    verified: false,
-  },
-  {
-    description:
-      "Setup katalog WhatsApp, landing page sederhana, QR menu, dan form pesanan.",
-    initials: "DP",
-    location: "Online",
-    providerName: "Dipa Webcare",
-    qualityLabel: "Direkomendasikan",
-    recommendationCount: 14,
-    reportCount: 0,
-    reviewCount: 19,
-    status: "ACTIVE" as ServiceStatus,
-    tags: ["website", "whatsapp", "umkm"],
-    title: "Bantu digitalisasi UMKM",
-    verified: true,
-  },
-];
-
-const demoReviews = [
-  "Datang tepat waktu, kerja rapi, dan jelasin masalahnya tanpa muter-muter.",
-  "Hasil foto bersih, arahan gaya produknya enak, file dikirim cepat.",
-  "Makeup tahan lama dan tetap natural. Komunikasinya juga gampang.",
-  "Bikin sistem order simpel yang langsung bisa dipakai kasir dan owner.",
-];
 
 function serviceStatusToUi(status: ServiceStatus) {
   if (status === "FLAGGED") {
@@ -219,49 +140,20 @@ function reviewToItem(
   };
 }
 
-export async function ensureDemoServiceListings() {
-  const count = await prisma.serviceListing.count();
-
-  if (count > 0) {
-    return;
-  }
-
-  for (const [index, service] of demoServices.entries()) {
-    const ai = await analyzeServiceContent({
-      description: service.description,
-      review: demoReviews[index],
-      title: service.title,
-    });
-
-    await prisma.serviceListing.create({
-      data: {
-        ...service,
-        aiSummary: ai.summary,
-        category: ai.category,
-        qualityLabel: ai.qualityLabel,
-        tags: ai.tags.length ? ai.tags : service.tags,
-        recommendations: {
-          create: {
-            review: demoReviews[index],
-            tags: ["Tepat waktu", "Komunikasi baik"],
-            user: {
-              connectOrCreate: {
-                create: {
-                  bio: null,
-                  firstName: "Demo",
-                  telegramId: BigInt(9900000000 + index),
-                  username: `demo_rekomendasi_${index + 1}`,
-                },
-                where: {
-                  telegramId: BigInt(9900000000 + index),
-                },
-              },
-            },
-          },
-        },
+export async function getServiceCategories() {
+  const rows = await prisma.serviceListing.findMany({
+    distinct: ["category"],
+    orderBy: { category: "asc" },
+    select: { category: true },
+    where: {
+      status: {
+        not: "HIDDEN",
       },
-    });
-  }
+    },
+  });
+  const categories = rows.map((row) => row.category).filter(Boolean);
+
+  return ["Semua", ...categories];
 }
 
 export async function getServicePage({

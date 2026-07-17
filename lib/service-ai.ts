@@ -5,94 +5,71 @@ export type ServiceAiResult = {
   tags: string[];
 };
 
-const allowedCategories = ["Rumah", "Kreatif", "Kecantikan", "Digital", "Lainnya"];
-
-const keywordCategories = [
-  {
-    category: "Rumah",
-    keywords: [
-      "ac",
-      "bersih",
-      "dapur",
-      "elektrik",
-      "instalasi",
-      "kamar mandi",
-      "lampu",
-      "ledeng",
-      "listrik",
-      "renovasi",
-      "rumah",
-      "sofa",
-      "stop kontak",
-    ],
-  },
-  {
-    category: "Kecantikan",
-    keywords: [
-      "beauty",
-      "hair",
-      "kecantikan",
-      "makeup",
-      "mua",
-      "nail",
-      "salon",
-      "skincare",
-      "wisuda",
-    ],
-  },
-  {
-    category: "Kreatif",
-    keywords: [
-      "desain",
-      "foto",
-      "fotografer",
-      "konten",
-      "kreatif",
-      "produk",
-      "studio",
-      "video",
-    ],
-  },
-  {
-    category: "Digital",
-    keywords: [
-      "aplikasi",
-      "digital",
-      "landing page",
-      "online",
-      "qr",
-      "umkm",
-      "website",
-      "whatsapp",
-    ],
-  },
+const serviceKeywords = [
+  "ac",
+  "aplikasi",
+  "beauty",
+  "bersih",
+  "dapur",
+  "desain",
+  "elektrik",
+  "foto",
+  "fotografer",
+  "hair",
+  "instalasi",
+  "kamar mandi",
+  "konten",
+  "lampu",
+  "landing page",
+  "ledeng",
+  "listrik",
+  "makeup",
+  "mua",
+  "nail",
+  "online",
+  "produk",
+  "qr",
+  "renovasi",
+  "salon",
+  "skincare",
+  "sofa",
+  "stop kontak",
+  "studio",
+  "umkm",
+  "video",
+  "website",
+  "whatsapp",
+  "wisuda",
 ];
 
 function normalizeText(value: string) {
   return value.toLowerCase();
 }
 
-function fallbackCategory(text: string) {
-  const normalized = normalizeText(text);
+function normalizeCategory(value?: string | null) {
+  const trimmed = value
+    ?.replace(/[#|/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 
-  for (const group of keywordCategories) {
-    if (group.keywords.some((keyword) => normalized.includes(keyword))) {
-      return group.category;
-    }
+  if (!trimmed) {
+    return "Jasa umum";
   }
 
-  return "Lainnya";
+  return trimmed.slice(0, 40);
+}
+
+function fallbackCategory(title: string) {
+  return normalizeCategory(title);
 }
 
 function fallbackTags(text: string) {
   const normalized = normalizeText(text);
   const tags = new Set<string>();
 
-  for (const group of keywordCategories) {
-    for (const keyword of group.keywords) {
-      if (normalized.includes(keyword)) {
-        tags.add(keyword);
-      }
+  for (const keyword of serviceKeywords) {
+    if (normalized.includes(keyword)) {
+      tags.add(keyword);
     }
   }
 
@@ -160,7 +137,7 @@ export async function analyzeServiceContent({
 }): Promise<ServiceAiResult> {
   const text = [title, description, review].filter(Boolean).join("\n");
   const fallback: ServiceAiResult = {
-    category: fallbackCategory(text),
+    category: fallbackCategory(title),
     qualityLabel: fallbackQuality(text),
     summary: fallbackSummary(review || description),
     tags: fallbackTags(text),
@@ -177,7 +154,7 @@ export async function analyzeServiceContent({
         messages: [
           {
             content:
-              "Kamu mengklasifikasikan katalog jasa Indonesia. Balas JSON valid saja dengan keys: category, tags, qualityLabel, summary. category harus salah satu: Rumah, Kreatif, Kecantikan, Digital, Lainnya. qualityLabel harus singkat: Sangat direkomendasikan, Direkomendasikan, Campuran, Perlu hati-hati, atau Belum cukup sinyal. summary maksimal 140 karakter.",
+              "Kamu mengklasifikasikan katalog jasa Indonesia. Balas JSON valid saja dengan keys: category, tags, qualityLabel, summary. category harus berupa jenis jasa spesifik dari input user, singkat 1-3 kata, misalnya Teknisi listrik, Fotografer produk, Makeup artist, Web UMKM. Jangan pakai bucket kategori generik bawaan. qualityLabel harus singkat: Sangat direkomendasikan, Direkomendasikan, Campuran, Perlu hati-hati, atau Belum cukup sinyal. summary maksimal 140 karakter.",
             role: "system",
           },
           {
@@ -210,13 +187,8 @@ export async function analyzeServiceContent({
     }
 
     const parsed = parseAiJson(content);
-    const category =
-      parsed.category && allowedCategories.includes(parsed.category)
-        ? parsed.category
-        : fallback.category;
-
     return {
-      category,
+      category: normalizeCategory(parsed.category ?? fallback.category),
       qualityLabel: parsed.qualityLabel?.slice(0, 40) || fallback.qualityLabel,
       summary: parsed.summary?.slice(0, 160) || fallback.summary,
       tags: Array.isArray(parsed.tags)

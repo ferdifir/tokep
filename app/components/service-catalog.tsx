@@ -463,22 +463,24 @@ export function ServiceCatalog({
           </div>
         </div>
 
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-          {categories.map((category) => (
-            <button
-              className={`h-9 shrink-0 rounded-md px-3 text-sm font-semibold ${
-                activeCategory === category
-                  ? "bg-white text-black"
-                  : "border border-white/10 bg-zinc-950 text-white/70"
-              }`}
-              key={category}
-              onClick={() => void selectCategory(category)}
-              type="button"
-            >
-              {category}
-            </button>
-          ))}
-        </div>
+        {categories.length > 1 ? (
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+            {categories.map((category) => (
+              <button
+                className={`h-9 shrink-0 rounded-md px-3 text-sm font-semibold ${
+                  activeCategory === category
+                    ? "bg-white text-black"
+                    : "border border-white/10 bg-zinc-950 text-white/70"
+                }`}
+                key={category}
+                onClick={() => void selectCategory(category)}
+                type="button"
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </header>
 
       {notice ? (

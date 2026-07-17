@@ -44,7 +44,7 @@ Sistem menentukan kategori dari jenis jasa dan deskripsi. Jika `GROQ_API_KEY` te
 
 Output klasifikasi:
 
-- `category`: kategori utama seperti `Rumah`, `Kreatif`, `Kecantikan`, `Digital`, atau `Lainnya`.
+- `category`: jenis jasa singkat yang ditentukan dari input user, misalnya `Teknisi listrik`, `Fotografer produk`, atau `Makeup artist`.
 - `tags`: tag jasa yang diekstrak dari jenis jasa/deskripsi/review.
 - `qualityLabel`: label kualitas seperti `Direkomendasikan`, `Campuran`, atau `Perlu hati-hati`.
 - `aiSummary`: ringkasan singkat untuk preview kartu.
@@ -91,7 +91,7 @@ Alasan laporan:
 - Hasil tidak sesuai.
 - Komunikasi buruk.
 - Dugaan penipuan.
-- Lainnya.
+- Alasan lain yang dijelaskan user.
 
 Saat laporan masuk:
 
@@ -100,7 +100,7 @@ Saat laporan masuk:
 - Jika jumlah laporan unik mencapai `SERVICE_REPORT_FLAG_THRESHOLD`, `ServiceListing.status` berubah menjadi `FLAGGED`.
 - Kartu tetap tampil, tetapi diberi peringatan setelah threshold tercapai.
 
-Status yang disarankan:
+Status listing:
 
 - `ACTIVE`: tampil normal.
 - `FLAGGED`: tampil dengan peringatan.
@@ -167,9 +167,9 @@ Implementasi saat ini sudah menyimpan data ke database:
 - Queue admin untuk klaim, laporan, dan listing yang perlu review.
 - Aksi admin untuk approve/reject/dispute klaim.
 - Aksi admin untuk memberi status `ACTIVE`, `FLAGGED`, `RESTRICTED`, atau `HIDDEN`.
-- Audit log untuk upload/update/delete/sync media dan moderation servis.
+- Audit log untuk upload/update/delete media dan moderation servis.
 
-Data dummy tidak dibuat otomatis saat request user. Seed/demo harus dijalankan secara eksplisit di development agar data produksi tidak tercampur contoh.
+Data dummy tidak ada di production code. Kategori tab Servis hanya berasal dari kategori listing yang benar-benar tersimpan di database; jika database kosong, UI tidak menampilkan kategori contoh.
 
 Guard abuse dasar:
 
