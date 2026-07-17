@@ -1,6 +1,6 @@
 {
   "name": "tokep",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,7 +10,8 @@
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:seed": "npm run media:index",
-    "media:index": "tsx scripts/index-media.ts"
+    "media:index": "tsx scripts/index-media.ts",
+    "telegram:webhook": "tsx --env-file=.env scripts/telegram-webhook.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

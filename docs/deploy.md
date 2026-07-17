@@ -64,6 +64,7 @@ Use `.env.production.example` as the template for
 
 - `DATABASE_URL`
 - `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET`
 - `ADMIN_SESSION_SECRET`
 - `ADMIN_TELEGRAM_ID`
 
@@ -112,3 +113,15 @@ CONFIRM_RESTORE=1 scripts/db-restore.sh /var/www/tokep/backups/db/tokep-YYYYMMDD
 
 Run restore only after stopping traffic or confirming the app can tolerate the
 database being replaced. Restore does not move media files in `konten/`.
+
+## Telegram Bot Webhook
+
+After deploy, configure the bot webhook and command list:
+
+```bash
+npm run telegram:webhook
+```
+
+The script registers `/api/telegram/webhook` for `@tokepaibot` and sets `/start`
+plus `/help`. `/start` replies with the Mini App feature summary and a button
+that opens the Mini App.
