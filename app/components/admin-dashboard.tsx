@@ -15,7 +15,6 @@ import {
 import { FormEvent, RefObject, useCallback, useEffect, useRef, useState } from "react";
 
 type AdminMedia = {
-  caption: string | null;
   createdAt: string;
   filename: string;
   id: string;
@@ -558,10 +557,10 @@ function ContentAdmin({
         onSubmit={uploadMedia}
       >
         <div className="grid gap-3 md:grid-cols-[1fr_1fr]">
-          <input
-            className="h-10 rounded-md border border-white/10 bg-black px-3 text-sm"
+          <textarea
+            className="min-h-20 rounded-md border border-white/10 bg-black px-3 py-2 text-sm"
             name="title"
-            placeholder="Judul"
+            placeholder="Title/caption"
           />
           <input
             accept="image/jpeg,image/png,image/webp,image/avif,video/mp4"
@@ -572,11 +571,6 @@ function ContentAdmin({
             type="file"
           />
         </div>
-        <textarea
-          className="min-h-20 rounded-md border border-white/10 bg-black px-3 py-2 text-sm"
-          name="caption"
-          placeholder="Caption"
-        />
         <div className="grid gap-3 md:grid-cols-[1fr_auto]">
           <input
             className="h-10 rounded-md border border-white/10 bg-black px-3 text-sm"
@@ -646,14 +640,15 @@ function ContentAdmin({
               )}
             </div>
             <div className="min-w-0">
-              <input
-                className="h-10 w-full rounded-md border border-white/10 bg-black px-3 text-sm font-semibold"
+              <textarea
+                className="min-h-16 w-full rounded-md border border-white/10 bg-black px-3 py-2 text-sm font-semibold leading-5"
                 defaultValue={item.title}
                 onBlur={(event) => {
                   if (event.target.value !== item.title) {
                     void updateMedia(item.id, { title: event.target.value });
                   }
                 }}
+                placeholder="Title/caption"
               />
               <p className="mt-2 break-all text-xs leading-5 text-white/45">
                 {item.type} - {item.filename}
@@ -661,16 +656,6 @@ function ContentAdmin({
               <p className="mt-1 text-xs text-white/45">
                 {item.visible ? "Visible" : "Hidden"}
               </p>
-              <textarea
-                className="mt-3 min-h-16 w-full rounded-md border border-white/10 bg-black px-3 py-2 text-xs leading-5 text-white/75"
-                defaultValue={item.caption ?? ""}
-                onBlur={(event) => {
-                  if (event.target.value !== (item.caption ?? "")) {
-                    void updateMedia(item.id, { caption: event.target.value });
-                  }
-                }}
-                placeholder="Caption"
-              />
               <input
                 className="mt-3 h-9 w-full rounded-md border border-white/10 bg-black px-3 text-xs text-white/75"
                 defaultValue={

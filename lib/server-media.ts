@@ -136,11 +136,9 @@ export async function indexMediaDirectory() {
 }
 
 export async function storeUploadedMedia({
-  caption,
   file,
   title,
 }: {
-  caption?: string;
   file: File;
   title?: string;
 }) {
@@ -166,7 +164,6 @@ export async function storeUploadedMedia({
   return prisma.media.create({
     data: {
       filename,
-      caption: caption?.trim() || null,
       src: mediaSrcForFilename(kind, filename),
       title: title?.trim() || (kind === "photo" ? "Foto baru" : "Video baru"),
       type: kind === "photo" ? "PHOTO" : "VIDEO",

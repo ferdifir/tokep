@@ -40,7 +40,6 @@ export async function GET(request: Request) {
             OR: [
               { filename: { contains: search, mode: "insensitive" } },
               { title: { contains: search, mode: "insensitive" } },
-              { caption: { contains: search, mode: "insensitive" } },
             ],
           }
         : {}),
@@ -69,7 +68,6 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const file = form.get("file");
     const title = form.get("title");
-    const caption = form.get("caption");
     const hashtags = form.get("hashtags");
 
     if (!(file instanceof File)) {
@@ -77,7 +75,6 @@ export async function POST(request: Request) {
     }
 
     const media = await storeUploadedMedia({
-      caption: typeof caption === "string" ? caption : undefined,
       file,
       title: typeof title === "string" ? title : undefined,
     });
@@ -85,7 +82,7 @@ export async function POST(request: Request) {
       mediaId: media.id,
       names: parseHashtags(
         [
-          typeof caption === "string" ? caption : "",
+          typeof title === "string" ? title : "",
           typeof hashtags === "string" ? hashtags : "",
         ].join(" "),
       ),
@@ -94,7 +91,6 @@ export async function POST(request: Request) {
       action: "media.upload",
       adminTelegramId: admin.telegramId,
       metadata: {
-        caption: media.caption,
         filename: media.filename,
         tags: tags.map((tag) => tag.name),
         title: media.title,
