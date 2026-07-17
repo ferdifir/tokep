@@ -25,26 +25,28 @@ async function callTelegram(method: string, body: unknown) {
   return data;
 }
 
-await callTelegram("setWebhook", {
-  allowed_updates: ["message"],
-  drop_pending_updates: false,
-  secret_token: webhookSecret || undefined,
-  url: webhookUrl,
-});
+async function main() {
+  await callTelegram("setWebhook", {
+    allowed_updates: ["message"],
+    drop_pending_updates: false,
+    secret_token: webhookSecret || undefined,
+    url: webhookUrl,
+  });
 
-await callTelegram("setMyCommands", {
-  commands: [
-    {
-      command: "start",
-      description: "Buka Mini App dan lihat fitur utama",
-    },
-    {
-      command: "help",
-      description: "Lihat daftar command",
-    },
-  ],
-});
+  await callTelegram("setMyCommands", {
+    commands: [
+      {
+        command: "start",
+        description: "Buka Mini App dan lihat fitur utama",
+      },
+      {
+        command: "help",
+        description: "Lihat daftar command",
+      },
+    ],
+  });
 
-console.log(`Telegram webhook configured: ${webhookUrl}`);
+  console.log(`Telegram webhook configured: ${webhookUrl}`);
+}
 
-export {};
+void main();
