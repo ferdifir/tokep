@@ -18,11 +18,15 @@ export async function PATCH(
 
   const { id } = await params;
   const body = (await request.json()) as {
+    caption?: string;
     title?: string;
     visible?: boolean;
   };
   const media = await prisma.media.update({
     data: {
+      ...(typeof body.caption === "string"
+        ? { caption: body.caption.trim() || null }
+        : {}),
       ...(typeof body.title === "string" ? { title: body.title.trim() } : {}),
       ...(typeof body.visible === "boolean" ? { visible: body.visible } : {}),
     },

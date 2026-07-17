@@ -1,12 +1,40 @@
 import { prisma } from "@/lib/db";
 
+const maxMediaTags = 12;
+
 export function tagSlug(name: string) {
   return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 64);
+}
+
+export function parseHashtags(input: string) {
+  const matches = input.matchAll(/#([\p{L}\p{N}_-]{1,40})/gu);
+  const names: string[] = [];
+  const seen = new Set<string>();
+
+  for (const match of matches) {
+    const name = match[1]?.replace(/[_-]+/g, " ").trim();
+    const slug = tagSlug(name ?? "");
+
+    if (!name || !slug || seen.has(slug)) {
+      continue;
+    }
+
+    seen.add(slug);
+    names.push(name.toLowerCase());
+
+    if (names.length >= maxMediaTags) {
+      break;
+    }
+  }
+
+  return names;
 }
 
 export async function incrementUserTagAffinity({
@@ -83,9 +111,13 @@ export async function setMediaTags({
   mediaId: string;
   names: string[];
 }) {
-  const cleanNames = [...new Set(names.map((name) => name.trim()).filter(Boolean))]
+  const cleanNames = [
+    ...new Set(
+      names.map((name) => name.replace(/^#+/, "").trim()).filter(Boolean),
+    ),
+  ]
     .map((name) => name.slice(0, 40))
-    .slice(0, 8);
+    .slice(0, maxMediaTags);
 
   const tags = [];
 

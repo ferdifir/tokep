@@ -15,6 +15,7 @@ import {
 import { FormEvent, RefObject, useCallback, useEffect, useRef, useState } from "react";
 
 type AdminMedia = {
+  caption: string | null;
   createdAt: string;
   filename: string;
   id: string;
@@ -265,9 +266,9 @@ export function AdminDashboard() {
     }
   }
 
-  async function updateMediaTags(id: string, tags: string[]) {
+  async function updateMediaTags(id: string, hashtags: string) {
     const response = await fetch(`/api/admin/media/${id}/tags`, {
-      body: JSON.stringify({ tags }),
+      body: JSON.stringify({ hashtags }),
       headers: {
         "Content-Type": "application/json",
       },
@@ -546,37 +547,51 @@ function ContentAdmin({
   setType: (value: string) => void;
   type: string;
   updateMedia: (id: string, body: Partial<AdminMedia>) => Promise<void>;
-  updateMediaTags: (id: string, tags: string[]) => Promise<void>;
+  updateMediaTags: (id: string, hashtags: string) => Promise<void>;
   uploadMedia: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   uploading: boolean;
 }) {
   return (
     <>
       <form
-        className="mt-5 grid gap-3 rounded-md border border-white/10 bg-zinc-950 p-4 md:grid-cols-[1fr_1fr_auto]"
+        className="mt-5 grid gap-3 rounded-md border border-white/10 bg-zinc-950 p-4"
         onSubmit={uploadMedia}
       >
-        <input
-          className="rounded-md border border-white/10 bg-black px-3 py-2 text-sm"
-          name="title"
-          placeholder="Judul opsional"
+        <div className="grid gap-3 md:grid-cols-[1fr_1fr]">
+          <input
+            className="h-10 rounded-md border border-white/10 bg-black px-3 text-sm"
+            name="title"
+            placeholder="Judul"
+          />
+          <input
+            accept="image/jpeg,image/png,image/webp,image/avif,video/mp4"
+            className="h-10 rounded-md border border-white/10 bg-black px-3 text-sm"
+            name="file"
+            ref={fileRef}
+            required
+            type="file"
+          />
+        </div>
+        <textarea
+          className="min-h-20 rounded-md border border-white/10 bg-black px-3 py-2 text-sm"
+          name="caption"
+          placeholder="Caption"
         />
-        <input
-          accept="image/jpeg,image/png,image/webp,image/avif,video/mp4"
-          className="rounded-md border border-white/10 bg-black px-3 py-2 text-sm"
-          name="file"
-          ref={fileRef}
-          required
-          type="file"
-        />
-        <button
-          className="h-10 rounded-md bg-white px-4 text-sm font-semibold text-black disabled:opacity-50"
-          disabled={uploading}
-          type="submit"
-        >
-          <Upload className="mr-2 inline" size={16} />
-          Upload
-        </button>
+        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <input
+            className="h-10 rounded-md border border-white/10 bg-black px-3 text-sm"
+            name="hashtags"
+            placeholder="#mantap #pantai #gunung"
+          />
+          <button
+            className="h-10 rounded-md bg-white px-4 text-sm font-semibold text-black disabled:opacity-50"
+            disabled={uploading}
+            type="submit"
+          >
+            <Upload className="mr-2 inline" size={16} />
+            Upload
+          </button>
+        </div>
       </form>
 
       <div className="mt-4 grid gap-3 md:grid-cols-[160px_1fr_auto]">
@@ -646,21 +661,30 @@ function ContentAdmin({
               <p className="mt-1 text-xs text-white/45">
                 {item.visible ? "Visible" : "Hidden"}
               </p>
-              <input
-                className="mt-3 h-9 w-full rounded-md border border-white/10 bg-black px-3 text-xs text-white/75"
-                defaultValue={item.tags?.map((tag) => tag.name).join(", ") ?? ""}
+              <textarea
+                className="mt-3 min-h-16 w-full rounded-md border border-white/10 bg-black px-3 py-2 text-xs leading-5 text-white/75"
+                defaultValue={item.caption ?? ""}
                 onBlur={(event) => {
-                  const tags = event.target.value
-                    .split(",")
-                    .map((tag) => tag.trim())
-                    .filter(Boolean);
-                  const previous = item.tags?.map((tag) => tag.name).join(", ") ?? "";
-
-                  if (event.target.value.trim() !== previous) {
-                    void updateMediaTags(item.id, tags);
+                  if (event.target.value !== (item.caption ?? "")) {
+                    void updateMedia(item.id, { caption: event.target.value });
                   }
                 }}
-                placeholder="Tag: musik, tutorial, lucu"
+                placeholder="Caption"
+              />
+              <input
+                className="mt-3 h-9 w-full rounded-md border border-white/10 bg-black px-3 text-xs text-white/75"
+                defaultValue={
+                  item.tags?.map((tag) => `#${tag.slug}`).join(" ") ?? ""
+                }
+                onBlur={(event) => {
+                  const previous =
+                    item.tags?.map((tag) => `#${tag.slug}`).join(" ") ?? "";
+
+                  if (event.target.value.trim() !== previous) {
+                    void updateMediaTags(item.id, event.target.value);
+                  }
+                }}
+                placeholder="#mantap #pantai #gunung"
               />
             </div>
             <div className="flex items-center gap-2 md:flex-col">

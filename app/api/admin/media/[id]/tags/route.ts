@@ -1,6 +1,10 @@
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { requireAdmin } from "@/lib/admin-auth";
-import { getMediaTags, setMediaTags } from "@/lib/media-personalization";
+import {
+  getMediaTags,
+  parseHashtags,
+  setMediaTags,
+} from "@/lib/media-personalization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,10 +36,16 @@ export async function PUT(
   }
 
   const { id } = await params;
-  const body = (await request.json()) as { tags?: string[] };
+  const body = (await request.json()) as { hashtags?: string; tags?: string[] };
+  const names =
+    typeof body.hashtags === "string"
+      ? parseHashtags(body.hashtags)
+      : Array.isArray(body.tags)
+        ? body.tags
+        : [];
   const tags = await setMediaTags({
     mediaId: id,
-    names: Array.isArray(body.tags) ? body.tags : [],
+    names,
   });
 
   await recordAdminAudit({

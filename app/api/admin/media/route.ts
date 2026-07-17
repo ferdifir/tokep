@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { recordAdminAudit } from "@/lib/admin-audit";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getLimit } from "@/lib/media-store";
+import { parseHashtags, setMediaTags } from "@/lib/media-personalization";
 import { storeUploadedMedia } from "@/lib/server-media";
 
 export const runtime = "nodejs";
@@ -39,6 +40,7 @@ export async function GET(request: Request) {
             OR: [
               { filename: { contains: search, mode: "insensitive" } },
               { title: { contains: search, mode: "insensitive" } },
+              { caption: { contains: search, mode: "insensitive" } },
             ],
           }
         : {}),
@@ -67,20 +69,34 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const file = form.get("file");
     const title = form.get("title");
+    const caption = form.get("caption");
+    const hashtags = form.get("hashtags");
 
     if (!(file instanceof File)) {
       return Response.json({ error: "File wajib diisi" }, { status: 400 });
     }
 
-    const media = await storeUploadedMedia(
+    const media = await storeUploadedMedia({
+      caption: typeof caption === "string" ? caption : undefined,
       file,
-      typeof title === "string" ? title : undefined,
-    );
+      title: typeof title === "string" ? title : undefined,
+    });
+    const tags = await setMediaTags({
+      mediaId: media.id,
+      names: parseHashtags(
+        [
+          typeof caption === "string" ? caption : "",
+          typeof hashtags === "string" ? hashtags : "",
+        ].join(" "),
+      ),
+    });
     await recordAdminAudit({
       action: "media.upload",
       adminTelegramId: admin.telegramId,
       metadata: {
+        caption: media.caption,
         filename: media.filename,
+        tags: tags.map((tag) => tag.name),
         title: media.title,
         type: media.type,
       },
